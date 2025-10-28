@@ -77,7 +77,7 @@ export default function LoginPage() {
               </div>
               {error && <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
+                {isLoading ? "Iniciando sesión.." : "Iniciar Sesión"}
               </Button>
             </form>
           </CardContent>
