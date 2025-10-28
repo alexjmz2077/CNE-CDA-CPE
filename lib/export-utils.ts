@@ -35,7 +35,7 @@ export async function exportToExcel(data: any[], filename: string) {
 
 export async function exportToPDF(data: any[], filename: string, title: string) {
   const { jsPDF } = await import("jspdf")
-  await import("jspdf-autotable")
+  const autoTable = (await import("jspdf-autotable")).default
 
   const doc = new jsPDF()
 
@@ -52,7 +52,7 @@ export async function exportToPDF(data: any[], filename: string, title: string) 
   } else {
     const headers = Object.keys(data[0])
     const rows = data.map((row) => headers.map((header) => row[header]))
-    ;(doc as any).autoTable({
+    autoTable(doc, {
       head: [headers],
       body: rows,
       startY: 28,
