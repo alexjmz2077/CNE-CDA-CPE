@@ -3,12 +3,12 @@
 import type React from "react"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SearchDropdown } from "@/components/ui/search-dropdown"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import type { PostgrestError } from "@supabase/supabase-js"
 
 type Process = {
   id: string
@@ -19,7 +19,15 @@ type Member = {
   id: string
   name: string
   cedula: string
-  member_type: "CPE" | "CDA"
+}
+
+type Precinct = {
+  id: string
+  code: string
+  name: string
+  canton?: string
+  parroquia?: string
+  parish?: string
 }
 
 type AssignmentFormProps = {
@@ -27,43 +35,55 @@ type AssignmentFormProps = {
     id: string
     process_id: string
     member_id: string
+    member_type: "CPE" | "CDA"
     role: string | null
-    precinct: string | null
-    members: {
-      member_type: "CPE" | "CDA"
-    }
+    cda_precinct_id: string | null
   }
-  processes: Process[]
-  members: Member[]
+  processes?: Process[]
+  members?: Member[]
+  precincts?: Precinct[]
 }
 
-export function AssignmentForm({ assignment, processes, members }: AssignmentFormProps) {
+const CPE_ROLE_OPTIONS = [
+  { value: "Supervisor", label: "Supervisor" },
+  { value: "Revisor", label: "Revisor de Firmas" },
+  { value: "Digitador", label: "Digitador" },
+  { value: "Archivador", label: "Archivo de Actas" },
+]
+
+export function AssignmentForm({ assignment, processes = [], members = [], precincts = [] }: AssignmentFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedMemberType, setSelectedMemberType] = useState<"CPE" | "CDA" | null>(
-    assignment?.members.member_type || null,
+    assignment?.member_type || null,
   )
   const [formData, setFormData] = useState({
     process_id: assignment?.process_id || "",
     member_id: assignment?.member_id || "",
     role: assignment?.role || "",
-    precinct: assignment?.precinct || "",
+    cda_precinct_id: assignment?.cda_precinct_id || "",
   })
 
-  useEffect(() => {
-    if (formData.member_id) {
-      const member = members.find((m) => m.id === formData.member_id)
-      if (member) {
-        setSelectedMemberType(member.member_type)
-      }
-    }
-  }, [formData.member_id, members])
+  const handleMemberTypeChange = (type: "CPE" | "CDA") => {
+    setSelectedMemberType(type)
+    setFormData((prev) => ({
+      ...prev,
+      role: type === "CPE" ? prev.role : "",
+      cda_precinct_id: type === "CDA" ? prev.cda_precinct_id : "",
+    }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
+
+    if (selectedMemberType === "CPE" && !formData.role) {
+      setError("Seleccione un rol válido para miembros CPE")
+      setIsLoading(false)
+      return
+    }
 
     const supabase = createClient()
     const {
@@ -80,12 +100,22 @@ export function AssignmentForm({ assignment, processes, members }: AssignmentFor
       const assignmentData = {
         process_id: formData.process_id,
         member_id: formData.member_id,
-        role: selectedMemberType === "CPE" ? formData.role : null,
-        precinct: selectedMemberType === "CDA" ? formData.precinct : null,
+        member_type: selectedMemberType,
+        role: selectedMemberType === "CPE" ? formData.role || null : null,
+        cda_precinct_id: selectedMemberType === "CDA" ? formData.cda_precinct_id : null,
       }
 
+      const handleDatabaseError = (dbError: PostgrestError) => {
+        if (dbError.code === "23505") {
+          setError("Este miembro ya está asignado al proceso seleccionado.")
+        } else {
+          setError(dbError.message || "Error al guardar la asignación")
+        }
+      }
+
+      let mutationError: PostgrestError | null = null
+
       if (assignment) {
-        // Update existing assignment
         const { error } = await supabase
           .from("assignments")
           .update({
@@ -93,16 +123,20 @@ export function AssignmentForm({ assignment, processes, members }: AssignmentFor
             updated_at: new Date().toISOString(),
           })
           .eq("id", assignment.id)
-
-        if (error) throw error
+        mutationError = error
       } else {
-        // Create new assignment
-        const { error } = await supabase.from("assignments").insert({
-          ...assignmentData,
-          created_by: user.id,
-        })
+        const { error } = await supabase.from("assignments").insert([
+          {
+            ...assignmentData,
+            created_by: user.id,
+          },
+        ])
+        mutationError = error
+      }
 
-        if (error) throw error
+      if (mutationError) {
+        handleDatabaseError(mutationError)
+        return
       }
 
       router.push("/dashboard/assignments")
@@ -116,83 +150,102 @@ export function AssignmentForm({ assignment, processes, members }: AssignmentFor
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-2">
-        <Label htmlFor="process_id">Proceso Electoral</Label>
-        <Select
-          value={formData.process_id}
-          onValueChange={(value) => setFormData({ ...formData, process_id: value })}
-          disabled={isLoading}
-          required
-        >
-          <SelectTrigger id="process_id">
-            <SelectValue placeholder="Seleccione un proceso" />
-          </SelectTrigger>
-          <SelectContent>
-            {processes.map((process) => (
-              <SelectItem key={process.id} value={process.id}>
-                {process.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="member_id">Miembro</Label>
-        <Select
-          value={formData.member_id}
-          onValueChange={(value) => setFormData({ ...formData, member_id: value })}
-          disabled={isLoading}
-          required
-        >
-          <SelectTrigger id="member_id">
-            <SelectValue placeholder="Seleccione un miembro" />
-          </SelectTrigger>
-          <SelectContent>
-            {members.map((member) => (
-              <SelectItem key={member.id} value={member.id}>
-                {member.name} ({member.cedula}) - {member.member_type}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {selectedMemberType === "CPE" && (
+      <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="role">Rol</Label>
+          <span className="text-sm font-medium text-muted-foreground">Proceso electoral</span>
           <Select
-            value={formData.role}
-            onValueChange={(value) => setFormData({ ...formData, role: value })}
+            value={formData.process_id}
+            onValueChange={(value) => setFormData({ ...formData, process_id: value })}
             disabled={isLoading}
-            required
           >
-            <SelectTrigger id="role">
-              <SelectValue placeholder="Seleccione un rol" />
+            <SelectTrigger className="rounded-full">
+              <SelectValue placeholder="Seleccione un proceso" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Supervisor">Supervisor</SelectItem>
-              <SelectItem value="Revisor">Revisor</SelectItem>
-              <SelectItem value="Digitador">Digitador</SelectItem>
-              <SelectItem value="Archivador">Archivador</SelectItem>
+              {processes.map((process) => (
+                <SelectItem key={process.id} value={process.id}>
+                  {process.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
-      )}
 
-      {selectedMemberType === "CDA" && (
-        <div className="space-y-2">
-          <Label htmlFor="precinct">Recinto Electoral</Label>
-          <Input
-            id="precinct"
-            placeholder="Ej: Recinto 001 - Escuela Central"
-            required
-            value={formData.precinct}
-            onChange={(e) => setFormData({ ...formData, precinct: e.target.value })}
+        <div className="space-y-2 md:col-span-2">
+          <SearchDropdown
+            placeholder="Buscar miembro por nombre o cédula"
+            searchPlaceholder="Escriba nombre o cédula…"
+            emptyText="No se encontraron miembros"
+            items={members.map((member) => ({
+              value: member.id,
+              label: member.name,
+              description: member.cedula,
+            }))}
+            value={formData.member_id}
+            onValueChange={(value) => setFormData({ ...formData, member_id: value })}
             disabled={isLoading}
           />
         </div>
-      )}
+      </div>
+
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <span className="text-sm font-medium text-muted-foreground">Tipo de miembro</span>
+          <Select
+            value={selectedMemberType ?? undefined}
+            onValueChange={(value) => handleMemberTypeChange(value as "CPE" | "CDA")}
+            disabled={isLoading}
+          >
+            <SelectTrigger className="rounded-full">
+              <SelectValue placeholder="Seleccione el tipo de miembro" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="CPE">Miembro CPE</SelectItem>
+              <SelectItem value="CDA">Miembro CDA</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {selectedMemberType === "CPE" ? (
+          <div className="space-y-2">
+            <span className="text-sm font-medium text-muted-foreground">Rol</span>
+            <Select
+              value={formData.role || undefined}
+              onValueChange={(value) => setFormData({ ...formData, role: value })}
+              disabled={isLoading}
+            >
+              <SelectTrigger className="rounded-full">
+                <SelectValue placeholder="Seleccione el rol" />
+              </SelectTrigger>
+              <SelectContent>
+                {CPE_ROLE_OPTIONS.map((role) => (
+                  <SelectItem key={role.value} value={role.value}>
+                    {role.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
+
+        {selectedMemberType === "CDA" ? (
+          <SearchDropdown
+            placeholder="Buscar recinto CDA"
+            searchPlaceholder="Código, nombre, cantón o parroquia…"
+            emptyText="No se encontraron recintos"
+            items={precincts.map((precinct) => ({
+              value: precinct.id,
+              label: precinct.name,
+              description: [precinct.code, precinct.canton, precinct.parroquia ?? precinct.parish]
+                .filter(Boolean)
+                .join(" · "),
+            }))}
+            value={formData.cda_precinct_id}
+            onValueChange={(value) => setFormData({ ...formData, cda_precinct_id: value })}
+            disabled={isLoading}
+          />
+        ) : null}
+      </div>
 
       {error && <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
 

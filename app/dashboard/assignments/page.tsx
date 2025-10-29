@@ -1,65 +1,62 @@
 import { createClient } from "@/lib/supabase/server"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
-import Link from "next/link"
-import { AssignmentTable } from "@/components/assignment-table"
-import { ExportButtons } from "@/components/export-buttons"
+import { AssignmentsContent } from "@/components/assignments-content"
 
-export default async function AssignmentsPage() {
+export default async function AssignmentsPage({
+  searchParams,
+}: {
+  searchParams?:
+    | Record<string, string | string[] | undefined>
+    | Promise<Record<string, string | string[] | undefined>>
+}) {
+  const resolvedSearchParams = (await searchParams) ?? {}
   const supabase = await createClient()
 
-  const { data: assignments, error } = await supabase
-    .from("assignments")
-    .select(
-      `
-      *,
-      electoral_processes(id, name),
-      members(id, name, cedula, member_type)
-    `,
-    )
+  const selectedProcessId =
+    typeof resolvedSearchParams.processId === "string" && resolvedSearchParams.processId.length
+      ? resolvedSearchParams.processId
+      : undefined
+
+  const initialMemberType =
+    typeof resolvedSearchParams.memberType === "string" &&
+    (resolvedSearchParams.memberType === "CPE" || resolvedSearchParams.memberType === "CDA")
+      ? (resolvedSearchParams.memberType as "CPE" | "CDA")
+      : "ALL"
+
+  const { data: processesData } = await supabase
+    .from("electoral_processes")
+    .select("id, name")
     .order("created_at", { ascending: false })
 
-  const exportData =
-    assignments?.map((a) => ({
-      Proceso: a.electoral_processes.name,
-      Miembro: a.members.name,
-      Cédula: a.members.cedula,
-      Tipo: a.members.member_type,
-      "Rol/Recinto": a.members.member_type === "CPE" ? a.role || "-" : `Recinto: ${a.precinct || "-"}`,
-    })) || []
+  const processes = processesData ?? []
+
+  let assignments: any[] = []
+  let assignmentsError: string | null = null
+
+  if (selectedProcessId) {
+    const { data, error } = await supabase
+      .from("assignments")
+      .select(
+        `
+        *,
+        electoral_processes(id, name),
+        members(id, name, cedula),
+        cda_precincts(id, name, canton, parish)
+      `,
+      )
+      .eq("process_id", selectedProcessId)
+      .order("created_at", { ascending: false })
+
+    assignments = data ?? []
+    assignmentsError = error?.message ?? null
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Asignaciones</h1>
-          <p className="text-muted-foreground">Gestión de asignaciones de miembros a procesos</p>
-        </div>
-        <div className="flex gap-2">
-          <ExportButtons data={exportData} filename="asignaciones" title="Lista de Asignaciones" />
-          <Link href="/dashboard/assignments/new">
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              Nueva Asignación
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Asignaciones</CardTitle>
-          <CardDescription>Todas las asignaciones registradas en el sistema</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {error ? (
-            <div className="text-sm text-destructive">Error al cargar las asignaciones</div>
-          ) : (
-            <AssignmentTable assignments={assignments || []} />
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <AssignmentsContent
+      processes={processes}
+      selectedProcessId={selectedProcessId}
+      assignments={assignments}
+      assignmentsError={assignmentsError}
+      initialMemberType={initialMemberType}
+    />
   )
 }

@@ -26,7 +26,6 @@ type Member = {
   phone: string | null
   email: string | null
   address: string | null
-  member_type: "CPE" | "CDA"
   created_at: string
 }
 
@@ -72,33 +71,12 @@ export function MemberTable({ members, currentFilter }: { members: Member[]; cur
 
   return (
     <>
-      <div className="mb-4 flex gap-2">
-        <Button variant={!currentFilter ? "default" : "outline"} size="sm" onClick={() => handleFilterChange(null)}>
-          Todos
-        </Button>
-        <Button
-          variant={currentFilter === "CPE" ? "default" : "outline"}
-          size="sm"
-          onClick={() => handleFilterChange("CPE")}
-        >
-          CPE
-        </Button>
-        <Button
-          variant={currentFilter === "CDA" ? "default" : "outline"}
-          size="sm"
-          onClick={() => handleFilterChange("CDA")}
-        >
-          CDA
-        </Button>
-      </div>
-
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Cédula</TableHead>
               <TableHead>Nombre</TableHead>
-              <TableHead>Tipo</TableHead>
               <TableHead>Teléfono</TableHead>
               <TableHead>Email</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
@@ -109,9 +87,6 @@ export function MemberTable({ members, currentFilter }: { members: Member[]; cur
               <TableRow key={member.id}>
                 <TableCell className="font-mono text-sm">{member.cedula}</TableCell>
                 <TableCell className="font-medium">{member.name}</TableCell>
-                <TableCell>
-                  <Badge variant={member.member_type === "CPE" ? "default" : "secondary"}>{member.member_type}</Badge>
-                </TableCell>
                 <TableCell>{member.phone || "-"}</TableCell>
                 <TableCell>{member.email || "-"}</TableCell>
                 <TableCell className="text-right">

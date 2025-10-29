@@ -7,10 +7,15 @@ export default async function EditAssignmentPage({ params }: { params: Promise<{
   const { id } = await params
   const supabase = await createClient()
 
-  const [{ data: assignment }, { data: processes }, { data: members }] = await Promise.all([
-    supabase.from("assignments").select("*, members(member_type)").eq("id", id).single(),
+  const [{ data: assignment }, { data: processes }, { data: members }, { data: precincts }] = await Promise.all([
+    supabase.from("assignments").select("*").eq("id", id).single(),
     supabase.from("electoral_processes").select("id, name").order("name"),
-    supabase.from("members").select("id, name, cedula, member_type").order("name"),
+    supabase.from("members").select("id, name, cedula").order("name"),
+    supabase
+      .from("cda_precincts")
+      .select("id, code, name, canton, parish")
+      .eq("is_enabled", true)
+      .order("name"),
   ])
 
   if (!assignment) {
@@ -30,7 +35,17 @@ export default async function EditAssignmentPage({ params }: { params: Promise<{
           <CardDescription>Modifique los datos de la asignación</CardDescription>
         </CardHeader>
         <CardContent>
-          <AssignmentForm assignment={assignment} processes={processes || []} members={members || []} />
+          <AssignmentForm
+            assignment={assignment}
+            processes={processes ?? []}
+            members={members ?? []}
+            precincts={
+              precincts?.map((precinct) => ({
+                ...precinct,
+                parroquia: precinct.parish,
+              })) ?? []
+            }
+          />
         </CardContent>
       </Card>
     </div>

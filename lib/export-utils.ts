@@ -37,7 +37,7 @@ export async function exportToPDF(data: any[], filename: string, title: string) 
   const { jsPDF } = await import("jspdf")
   const autoTable = (await import("jspdf-autotable")).default
 
-  const doc = new jsPDF()
+  const doc = new jsPDF({ orientation: "landscape" })
 
   // Add title
   doc.setFontSize(16)

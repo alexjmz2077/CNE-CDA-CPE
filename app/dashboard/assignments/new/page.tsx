@@ -5,9 +5,14 @@ import { AssignmentForm } from "@/components/assignment-form"
 export default async function NewAssignmentPage() {
   const supabase = await createClient()
 
-  const [{ data: processes }, { data: members }] = await Promise.all([
-    supabase.from("electoral_processes").select("id, name").order("name"),
-    supabase.from("members").select("id, name, cedula, member_type").order("name"),
+  const [{ data: processes }, { data: members }, { data: precincts }] = await Promise.all([
+    supabase.from("electoral_processes").select("id, name").order("created_at", { ascending: false }),
+    supabase.from("members").select("id, name, cedula").order("name"),
+    supabase
+      .from("cda_precincts")
+      .select("id, code, name, canton, parish")
+      .eq("is_enabled", true)
+      .order("name"),
   ])
 
   return (
@@ -23,7 +28,16 @@ export default async function NewAssignmentPage() {
           <CardDescription>Complete los datos de la asignación</CardDescription>
         </CardHeader>
         <CardContent>
-          <AssignmentForm processes={processes || []} members={members || []} />
+          <AssignmentForm
+            processes={processes ?? []}
+            members={members ?? []}
+            precincts={
+              precincts?.map((precinct) => ({
+                ...precinct,
+                parroquia: precinct.parish,
+              })) ?? []
+            }
+          />
         </CardContent>
       </Card>
     </div>

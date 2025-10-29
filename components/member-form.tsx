@@ -19,7 +19,7 @@ type MemberFormProps = {
     phone: string | null
     email: string | null
     address: string | null
-    member_type: "CPE" | "CDA"
+    is_admin: boolean
   }
 }
 
@@ -33,7 +33,7 @@ export function MemberForm({ member }: MemberFormProps) {
     phone: member?.phone || "",
     email: member?.email || "",
     address: member?.address || "",
-    member_type: member?.member_type || "CPE",
+    is_admin: member?.is_admin || false,
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,8 +63,8 @@ export function MemberForm({ member }: MemberFormProps) {
             phone: formData.phone || null,
             email: formData.email || null,
             address: formData.address || null,
-            member_type: formData.member_type,
             updated_at: new Date().toISOString(),
+            is_admin: formData.is_admin,
           })
           .eq("id", member.id)
 
@@ -77,8 +77,8 @@ export function MemberForm({ member }: MemberFormProps) {
           phone: formData.phone || null,
           email: formData.email || null,
           address: formData.address || null,
-          member_type: formData.member_type,
           created_by: user.id,
+          is_admin: formData.is_admin,
         })
 
         if (error) throw error
@@ -107,25 +107,7 @@ export function MemberForm({ member }: MemberFormProps) {
             disabled={isLoading}
           />
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="member_type">Tipo de Miembro</Label>
-          <Select
-            value={formData.member_type}
-            onValueChange={(value) => setFormData({ ...formData, member_type: value as "CPE" | "CDA" })}
-            disabled={isLoading}
-          >
-            <SelectTrigger id="member_type">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="CPE">CPE</SelectItem>
-              <SelectItem value="CDA">CDA</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
       </div>
-
       <div className="space-y-2">
         <Label htmlFor="name">Nombre Completo</Label>
         <Input
@@ -137,7 +119,6 @@ export function MemberForm({ member }: MemberFormProps) {
           disabled={isLoading}
         />
       </div>
-
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="phone">Teléfono</Label>
@@ -150,7 +131,6 @@ export function MemberForm({ member }: MemberFormProps) {
             disabled={isLoading}
           />
         </div>
-
         <div className="space-y-2">
           <Label htmlFor="email">Correo Electrónico</Label>
           <Input
@@ -163,7 +143,6 @@ export function MemberForm({ member }: MemberFormProps) {
           />
         </div>
       </div>
-
       <div className="space-y-2">
         <Label htmlFor="address">Dirección</Label>
         <Textarea
@@ -175,7 +154,6 @@ export function MemberForm({ member }: MemberFormProps) {
           rows={3}
         />
       </div>
-
       {error && <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
 
       <div className="flex gap-4">

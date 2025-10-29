@@ -7,7 +7,7 @@ import { Pencil, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,8 +23,15 @@ type Assignment = {
   id: string
   process_id: string
   member_id: string
+  member_type: "CPE" | "CDA"
   role: string | null
-  precinct: string | null
+  cda_precinct_id: string | null
+  cda_precincts?: {
+    id: string
+    name: string
+    canton: string | null
+    parish: string | null
+  } | null
   created_at: string
   electoral_processes: {
     id: string
@@ -34,7 +41,6 @@ type Assignment = {
     id: string
     name: string
     cedula: string
-    member_type: "CPE" | "CDA"
   }
 }
 
@@ -42,13 +48,50 @@ export function AssignmentTable({ assignments }: { assignments: Assignment[] }) 
   const router = useRouter()
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [sortConfig, setSortConfig] = useState<{ key: "member" | "cedula" | "type" | "role"; order: "asc" | "desc" }>({
+    key: "member",
+    order: "asc",
+  })
+
+  const handleSort = (key: "member" | "cedula" | "type" | "role") => {
+    setSortConfig((current) =>
+      current.key === key ? { key, order: current.order === "asc" ? "desc" : "asc" } : { key, order: "asc" },
+    )
+  }
+
+  const getComparableValue = (assignment: Assignment) => {
+    switch (sortConfig.key) {
+      case "member":
+        return assignment.members.name ?? ""
+      case "cedula":
+        return assignment.members.cedula ?? ""
+      case "type":
+        return assignment.member_type ?? ""
+      case "role":
+        return assignment.member_type === "CPE" ? assignment.role ?? "" : assignment.cda_precincts?.name ?? ""
+      default:
+        return ""
+    }
+  }
+
+  const sortedAssignments = useMemo(() => {
+    const sorted = [...assignments].sort((a, b) => {
+      const aValue = getComparableValue(a).toString().toLowerCase()
+      const bValue = getComparableValue(b).toString().toLowerCase()
+      return sortConfig.order === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue)
+    })
+    return sorted
+  }, [assignments, sortConfig])
 
   const handleDelete = async () => {
     if (!deleteId) return
     setIsDeleting(true)
     const supabase = createClient()
 
-    const { error } = await supabase.from("assignments").delete().eq("id", deleteId)
+    const { error } = await supabase
+      .from("assignments")
+      .delete()
+      .eq("id", deleteId)
 
     if (error) {
       alert("Error al eliminar la asignación")
@@ -76,30 +119,75 @@ export function AssignmentTable({ assignments }: { assignments: Assignment[] }) 
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Proceso Electoral</TableHead>
-              <TableHead>Miembro</TableHead>
-              <TableHead>Cédula</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Rol/Recinto</TableHead>
+              <TableHead>
+                <button
+                  type="button"
+                  onClick={() => handleSort("member")}
+                  className="flex items-center gap-1 font-medium"
+                >
+                  Miembro
+                  <span className="text-xs text-muted-foreground">
+                    {sortConfig.key === "member" ? (sortConfig.order === "asc" ? "↑" : "↓") : ""}
+                  </span>
+                </button>
+              </TableHead>
+              <TableHead>
+                <button
+                  type="button"
+                  onClick={() => handleSort("cedula")}
+                  className="flex items-center gap-1 font-medium"
+                >
+                  Cédula
+                  <span className="text-xs text-muted-foreground">
+                    {sortConfig.key === "cedula" ? (sortConfig.order === "asc" ? "↑" : "↓") : ""}
+                  </span>
+                </button>
+              </TableHead>
+              <TableHead>
+                <button
+                  type="button"
+                  onClick={() => handleSort("type")}
+                  className="flex items-center gap-1 font-medium"
+                >
+                  Tipo
+                  <span className="text-xs text-muted-foreground">
+                    {sortConfig.key === "type" ? (sortConfig.order === "asc" ? "↑" : "↓") : ""}
+                  </span>
+                </button>
+              </TableHead>
+              <TableHead>
+                <button
+                  type="button"
+                  onClick={() => handleSort("role")}
+                  className="flex items-center gap-1 font-medium"
+                >
+                  Rol/Recinto
+                  <span className="text-xs text-muted-foreground">
+                    {sortConfig.key === "role" ? (sortConfig.order === "asc" ? "↑" : "↓") : ""}
+                  </span>
+                </button>
+              </TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {assignments.map((assignment) => (
+            {sortedAssignments.map((assignment) => (
               <TableRow key={assignment.id}>
-                <TableCell className="font-medium">{assignment.electoral_processes.name}</TableCell>
-                <TableCell>{assignment.members.name}</TableCell>
+                <TableCell className="font-medium">{assignment.members.name}</TableCell>
                 <TableCell className="font-mono text-sm">{assignment.members.cedula}</TableCell>
                 <TableCell>
-                  <Badge variant={assignment.members.member_type === "CPE" ? "default" : "secondary"}>
-                    {assignment.members.member_type}
-                  </Badge>
+                  <Badge variant={assignment.member_type === "CPE" ? "default" : "secondary"}>{assignment.member_type}</Badge>
                 </TableCell>
                 <TableCell>
-                  {assignment.members.member_type === "CPE" ? (
-                    <span className="text-sm">{assignment.role}</span>
+                  {assignment.member_type === "CPE" ? (
+                    <span className="text-sm">{assignment.role ?? "Sin rol"}</span>
                   ) : (
-                    <span className="text-sm">Recinto: {assignment.precinct}</span>
+                    <div className="text-sm">
+                      <p className="font-medium">{assignment.cda_precincts?.name ?? "Sin recinto"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {[assignment.cda_precincts?.canton, assignment.cda_precincts?.parish].filter(Boolean).join(" / ") || "—"}
+                      </p>
+                    </div>
                   )}
                 </TableCell>
                 <TableCell className="text-right">
