@@ -7,7 +7,7 @@ import { Pencil, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +33,36 @@ export function MemberTable({ members, currentFilter }: { members: Member[]; cur
   const router = useRouter()
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [sortConfig, setSortConfig] = useState<{ key: "cedula" | "name"; order: "asc" | "desc" }>({
+    key: "cedula",
+    order: "asc",
+  })
+
+  const handleSort = (key: "cedula" | "name") => {
+    setSortConfig((current) =>
+      current.key === key ? { key, order: current.order === "asc" ? "desc" : "asc" } : { key, order: "asc" },
+    )
+  }
+
+  const getComparableValue = (member: Member) => {
+    switch (sortConfig.key) {
+      case "cedula":
+        return member.cedula ?? ""
+      case "name":
+        return member.name ?? ""
+      default:
+        return ""
+    }
+  }
+
+  const sortedMembers = useMemo(() => {
+    const sorted = [...members].sort((a, b) => {
+      const aValue = getComparableValue(a).toLowerCase()
+      const bValue = getComparableValue(b).toLowerCase()
+      return sortConfig.order === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue)
+    })
+    return sorted
+  }, [members, sortConfig])
 
   const handleDelete = async () => {
     if (!deleteId) return
@@ -75,15 +105,37 @@ export function MemberTable({ members, currentFilter }: { members: Member[]; cur
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Cédula</TableHead>
-              <TableHead>Nombre</TableHead>
+              <TableHead>
+                <button
+                  type="button"
+                  onClick={() => handleSort("cedula")}
+                  className="flex items-center gap-1 font-medium"
+                >
+                  Cédula
+                  <span className="text-xs text-muted-foreground">
+                    {sortConfig.key === "cedula" ? (sortConfig.order === "asc" ? "↑" : "↓") : ""}
+                  </span>
+                </button>
+              </TableHead>
+              <TableHead>
+                <button
+                  type="button"
+                  onClick={() => handleSort("name")}
+                  className="flex items-center gap-1 font-medium"
+                >
+                  Nombre
+                  <span className="text-xs text-muted-foreground">
+                    {sortConfig.key === "name" ? (sortConfig.order === "asc" ? "↑" : "↓") : ""}
+                  </span>
+                </button>
+              </TableHead>
               <TableHead>Teléfono</TableHead>
               <TableHead>Email</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {members.map((member) => (
+            {sortedMembers.map((member) => (
               <TableRow key={member.id}>
                 <TableCell className="font-mono text-sm">{member.cedula}</TableCell>
                 <TableCell className="font-medium">{member.name}</TableCell>

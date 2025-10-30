@@ -30,7 +30,7 @@ export function NavSidebar() {
       icon: Calendar,
     },
     {
-      title: "Personal CPE/CDA",
+      title: "Personal",
       href: "/dashboard/members",
       icon: Users,
     },
