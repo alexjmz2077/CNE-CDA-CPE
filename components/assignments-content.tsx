@@ -38,6 +38,7 @@ type Assignment = {
     id: string
     name: string
     cedula: string
+    phone: string | null
   }
 }
 
@@ -57,8 +58,9 @@ export function AssignmentsContent({
   initialMemberType = "ALL",
 }: AssignmentsContentProps) {
   const [memberType, setMemberType] = useState<MemberTypeFilter>(initialMemberType)
+  const [filteredAssignments, setFilteredAssignments] = useState<Assignment[]>(assignments)
 
-  const filteredAssignments = useMemo(() => {
+  const typeFilteredAssignments = useMemo(() => {
     if (memberType === "ALL") {
       return assignments
     }
@@ -72,6 +74,7 @@ export function AssignmentsContent({
       filteredAssignments.map((assignment) => ({
         Miembro: assignment.members?.name ?? "-",
         Cédula: assignment.members?.cedula ?? "-",
+        Teléfono: assignment.members?.phone ?? "-",
         Tipo: assignment.member_type,
         "Rol/Recinto":
           assignment.member_type === "CPE"
@@ -130,7 +133,10 @@ export function AssignmentsContent({
               Seleccione un proceso electoral para ver las asignaciones.
             </div>
           ) : (
-            <AssignmentTable assignments={filteredAssignments} />
+            <AssignmentTable
+              assignments={typeFilteredAssignments}
+              onFilteredAssignmentsChange={setFilteredAssignments}
+            />
           )}
         </CardContent>
       </Card>

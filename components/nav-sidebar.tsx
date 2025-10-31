@@ -80,6 +80,9 @@ export function NavSidebar() {
         })}
       </nav>
       <div className="border-t p-4">
+        <p className="mb-3 text-center text-xs text-muted-foreground">
+          Desarrollado por Jaime Jimenez 2025
+        </p>
         <Button variant="ghost" className="w-full justify-start gap-3 text-destructive" onClick={handleLogout}>
           <LogOut className="h-5 w-5" />
           Cerrar Sesión
