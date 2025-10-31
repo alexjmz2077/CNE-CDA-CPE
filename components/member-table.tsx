@@ -2,12 +2,13 @@
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Pencil, Trash2 } from "lucide-react"
+import { Pencil, Trash2, Search } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,10 +30,17 @@ type Member = {
   created_at: string
 }
 
-export function MemberTable({ members, currentFilter }: { members: Member[]; currentFilter?: string }) {
+type MemberTableProps = {
+  members: Member[]
+  currentFilter?: string
+  onFilteredMembersChange?: (filtered: Member[]) => void
+}
+
+export function MemberTable({ members, currentFilter, onFilteredMembersChange }: MemberTableProps) {
   const router = useRouter()
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
   const [sortConfig, setSortConfig] = useState<{ key: "cedula" | "name"; order: "asc" | "desc" }>({
     key: "cedula",
     order: "asc",
@@ -55,14 +63,37 @@ export function MemberTable({ members, currentFilter }: { members: Member[]; cur
     }
   }
 
-  const sortedMembers = useMemo(() => {
-    const sorted = [...members].sort((a, b) => {
-      const aValue = getComparableValue(a).toLowerCase()
-      const bValue = getComparableValue(b).toLowerCase()
-      return sortConfig.order === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue)
+  const filteredAndSortedMembers = useMemo(() => {
+    // Primero filtrar por búsqueda
+    let filtered = members
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase()
+      filtered = members.filter(
+        (member) =>
+          member.cedula.toLowerCase().includes(term) ||
+          member.name.toLowerCase().includes(term) ||
+          member.phone?.toLowerCase().includes(term) ||
+          member.email?.toLowerCase().includes(term),
+      )
+    }
+
+    // Luego ordenar
+    const sorted = [...filtered].sort((a, b) => {
+      const aValue = getComparableValue(a)
+      const bValue = getComparableValue(b)
+      return sortConfig.order === "asc"
+        ? aValue.localeCompare(bValue, "es", { sensitivity: "base" })
+        : bValue.localeCompare(aValue, "es", { sensitivity: "base" })
     })
     return sorted
-  }, [members, sortConfig])
+  }, [members, sortConfig, searchTerm])
+
+  // Notificar al padre cuando cambien los miembros filtrados
+  useEffect(() => {
+    if (onFilteredMembersChange) {
+      onFilteredMembersChange(filteredAndSortedMembers)
+    }
+  }, [filteredAndSortedMembers, onFilteredMembersChange])
 
   const handleDelete = async () => {
     if (!deleteId) return
@@ -101,6 +132,18 @@ export function MemberTable({ members, currentFilter }: { members: Member[]; cur
 
   return (
     <>
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por cédula, nombre, teléfono o email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -135,26 +178,34 @@ export function MemberTable({ members, currentFilter }: { members: Member[]; cur
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedMembers.map((member) => (
-              <TableRow key={member.id}>
-                <TableCell className="font-mono text-sm">{member.cedula}</TableCell>
-                <TableCell className="font-medium">{member.name}</TableCell>
-                <TableCell>{member.phone || "-"}</TableCell>
-                <TableCell>{member.email || "-"}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Link href={`/dashboard/members/${member.id}/edit`}>
-                      <Button variant="ghost" size="sm">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                    <Button variant="ghost" size="sm" onClick={() => setDeleteId(member.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
+            {filteredAndSortedMembers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                  No se encontraron resultados para "{searchTerm}"
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              filteredAndSortedMembers.map((member) => (
+                <TableRow key={member.id}>
+                  <TableCell className="font-mono text-sm">{member.cedula}</TableCell>
+                  <TableCell className="font-medium">{member.name}</TableCell>
+                  <TableCell>{member.phone || "-"}</TableCell>
+                  <TableCell>{member.email || "-"}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Link href={`/dashboard/members/${member.id}/edit`}>
+                        <Button variant="ghost" size="sm">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                      <Button variant="ghost" size="sm" onClick={() => setDeleteId(member.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>

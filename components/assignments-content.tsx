@@ -65,10 +65,11 @@ export function AssignmentsContent({
     return assignments.filter((assignment) => assignment.member_type === memberType)
   }, [assignments, memberType])
 
+  const selectedProcess = processes.find((p) => p.id === selectedProcessId)
+
   const exportData = useMemo(
     () =>
       filteredAssignments.map((assignment) => ({
-        Proceso: assignment.electoral_processes?.name ?? "-",
         Miembro: assignment.members?.name ?? "-",
         Cédula: assignment.members?.cedula ?? "-",
         Tipo: assignment.member_type,
@@ -85,6 +86,10 @@ export function AssignmentsContent({
     [filteredAssignments],
   )
 
+  const pdfTitle = selectedProcess
+    ? `Lista de Asignaciones: ${selectedProcess.name}`
+    : "Lista de Asignaciones"
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -94,7 +99,7 @@ export function AssignmentsContent({
         </div>
         <div className="flex gap-2">
           {selectedProcessId ? (
-            <ExportButtons data={exportData} filename="asignaciones" title="Lista de Asignaciones" />
+            <ExportButtons data={exportData} filename="asignaciones" title={pdfTitle} />
           ) : null}
           <Link href="/dashboard/assignments/new">
             <Button className="gap-2">

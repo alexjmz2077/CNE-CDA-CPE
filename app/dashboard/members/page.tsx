@@ -1,42 +1,63 @@
-import { createClient } from "@/lib/supabase/server"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
-import Link from "next/link"
-import { MemberTable } from "@/components/member-table"
-import { ExportButtons } from "@/components/export-buttons"
+"use client";
 
-export default async function MembersPage({ searchParams }: { searchParams: Promise<{ type?: string }> }) {
-  const params = await searchParams
-  const supabase = await createClient()
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { MemberTable } from "@/components/member-table";
+import { ExportButtons } from "@/components/export-buttons";
 
-  let query = supabase.from("members").select("*").order("created_at", { ascending: false })
+type Member = {
+  id: string;
+  cedula: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  created_at: string;
+};
 
-  if (params.type && (params.type === "CPE" || params.type === "CDA")) {
-    query = query.eq("member_type", params.type)
-  }
+export default function MembersPage() {
+  const [members, setMembers] = useState<Member[]>([]);
+  const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: members, error } = await query
+  useEffect(() => {
+    const fetchMembers = async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("members")
+        .select("id, cedula, name, phone, email, address, created_at")
+        .order("name");
 
-  const exportData =
-    members?.map((m) => ({
-      Cédula: m.cedula,
-      Nombre: m.name,
-      Tipo: m.member_type,
-      Teléfono: m.phone || "-",
-      Email: m.email || "-",
-      Dirección: m.address || "-",
-    })) || []
+      if (!error && data) {
+        setMembers(data);
+        setFilteredMembers(data);
+      }
+      setIsLoading(false);
+    };
+
+    fetchMembers();
+  }, []);
+
+  const exportData = filteredMembers.map((member) => ({
+    Cédula: member.cedula,
+    Nombre: member.name,
+    Teléfono: member.phone || "-",
+    Email: member.email || "-",
+  }));
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Miembros</h1>
-          <p className="text-muted-foreground">Gestión de miembros CPE y CDA</p>
+          <h1 className="text-3xl font-bold">Personal</h1>
+          <p className="text-muted-foreground">Gestión de miembros del equipo electoral</p>
         </div>
         <div className="flex gap-2">
-          <ExportButtons data={exportData} filename="miembros" title="Lista de Miembros CPE/CDA" />
+          <ExportButtons data={exportData} filename="personal" title="Lista de Personal" />
           <Link href="/dashboard/members/new">
             <Button className="gap-2">
               <Plus className="h-4 w-4" />
@@ -52,13 +73,13 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
           <CardDescription>Todos los miembros registrados en el sistema</CardDescription>
         </CardHeader>
         <CardContent>
-          {error ? (
-            <div className="text-sm text-destructive">Error al cargar los miembros</div>
+          {isLoading ? (
+            <p className="text-center text-muted-foreground">Cargando...</p>
           ) : (
-            <MemberTable members={members || []} currentFilter={params.type} />
+            <MemberTable members={members} onFilteredMembersChange={setFilteredMembers} />
           )}
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

@@ -22,15 +22,15 @@ export default async function AssignmentsPage({
       ? (resolvedSearchParams.memberType as "CPE" | "CDA")
       : "ALL"
 
-  const { data: processesData } = await supabase
+  // Fetch processes
+  const { data: processes, error: processesError } = await supabase
     .from("electoral_processes")
     .select("id, name")
-    .order("created_at", { ascending: false })
+    .order("start_date", { ascending: false })
 
-  const processes = processesData ?? []
-
-  let assignments: any[] = []
-  let assignmentsError: string | null = null
+  // Fetch assignments only if a process is selected
+  let assignmentsData = []
+  let assignmentsError = null
 
   if (selectedProcessId) {
     const { data, error } = await supabase
@@ -39,23 +39,23 @@ export default async function AssignmentsPage({
         `
         *,
         electoral_processes(id, name),
-        members(id, name, cedula),
+        members(id, name, cedula, phone),
         cda_precincts(id, name, canton, parish)
       `,
       )
       .eq("process_id", selectedProcessId)
       .order("created_at", { ascending: false })
 
-    assignments = data ?? []
-    assignmentsError = error?.message ?? null
+    assignmentsData = data || []
+    assignmentsError = error
   }
 
   return (
     <AssignmentsContent
-      processes={processes}
+      processes={processes || []}
       selectedProcessId={selectedProcessId}
-      assignments={assignments}
-      assignmentsError={assignmentsError}
+      assignments={assignmentsData}
+      assignmentsError={assignmentsError?.message}
       initialMemberType={initialMemberType}
     />
   )

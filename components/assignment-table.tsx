@@ -2,12 +2,13 @@
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Pencil, Trash2 } from "lucide-react"
+import { Pencil, Trash2, Search } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +42,7 @@ type Assignment = {
     id: string
     name: string
     cedula: string
+    phone: string | null
   }
 }
 
@@ -54,16 +56,22 @@ const CPE_ROLE_LABELS: Record<string, string> = {
   Administrador: "Administrador Técnico Provincial",
 }
 
-export function AssignmentTable({ assignments }: { assignments: Assignment[] }) {
+type AssignmentTableProps = {
+  assignments: Assignment[]
+  onFilteredAssignmentsChange?: (filtered: Assignment[]) => void
+}
+
+export function AssignmentTable({ assignments, onFilteredAssignmentsChange }: AssignmentTableProps) {
   const router = useRouter()
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [sortConfig, setSortConfig] = useState<{ key: "member" | "cedula" | "type" | "role"; order: "asc" | "desc" }>({
+  const [searchTerm, setSearchTerm] = useState("")
+  const [sortConfig, setSortConfig] = useState<{ key: "member" | "cedula" | "phone" | "type" | "role"; order: "asc" | "desc" }>({
     key: "member",
     order: "asc",
   })
 
-  const handleSort = (key: "member" | "cedula" | "type" | "role") => {
+  const handleSort = (key: "member" | "cedula" | "phone" | "type" | "role") => {
     setSortConfig((current) =>
       current.key === key ? { key, order: current.order === "asc" ? "desc" : "asc" } : { key, order: "asc" },
     )
@@ -75,6 +83,8 @@ export function AssignmentTable({ assignments }: { assignments: Assignment[] }) 
         return assignment.members.name ?? ""
       case "cedula":
         return assignment.members.cedula ?? ""
+      case "phone":
+        return assignment.members.phone ?? ""
       case "type":
         return assignment.member_type ?? ""
       case "role":
@@ -89,14 +99,51 @@ export function AssignmentTable({ assignments }: { assignments: Assignment[] }) 
     return CPE_ROLE_LABELS[role] || role
   }
 
-  const sortedAssignments = useMemo(() => {
-    const sorted = [...assignments].sort((a, b) => {
-      const aValue = getComparableValue(a).toString().toLowerCase()
-      const bValue = getComparableValue(b).toString().toLowerCase()
-      return sortConfig.order === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue)
+  const filteredAndSortedAssignments = useMemo(() => {
+    // Primero filtrar por búsqueda
+    let filtered = assignments
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase()
+      filtered = assignments.filter((assignment) => {
+        const memberName = assignment.members?.name?.toLowerCase() || ""
+        const cedula = assignment.members?.cedula?.toLowerCase() || ""
+        const phone = assignment.members?.phone?.toLowerCase() || ""
+        const type = assignment.member_type?.toLowerCase() || ""
+        const role = assignment.member_type === "CPE" 
+          ? getRoleLabel(assignment.role).toLowerCase()
+          : assignment.cda_precincts?.name?.toLowerCase() || ""
+        const location = assignment.member_type === "CDA"
+          ? `${assignment.cda_precincts?.canton || ""} ${assignment.cda_precincts?.parish || ""}`.toLowerCase()
+          : ""
+
+        return (
+          memberName.includes(term) ||
+          cedula.includes(term) ||
+          phone.includes(term) ||
+          type.includes(term) ||
+          role.includes(term) ||
+          location.includes(term)
+        )
+      })
+    }
+
+    // Luego ordenar
+    const sorted = [...filtered].sort((a, b) => {
+      const aValue = getComparableValue(a)
+      const bValue = getComparableValue(b)
+      return sortConfig.order === "asc"
+        ? aValue.localeCompare(bValue, "es", { sensitivity: "base" })
+        : bValue.localeCompare(aValue, "es", { sensitivity: "base" })
     })
     return sorted
-  }, [assignments, sortConfig])
+  }, [assignments, sortConfig, searchTerm])
+
+  // Notificar al padre cuando cambien las asignaciones filtradas
+  useEffect(() => {
+    if (onFilteredAssignmentsChange) {
+      onFilteredAssignmentsChange(filteredAndSortedAssignments)
+    }
+  }, [filteredAndSortedAssignments, onFilteredAssignmentsChange])
 
   const handleDelete = async () => {
     if (!deleteId) return
@@ -127,6 +174,18 @@ export function AssignmentTable({ assignments }: { assignments: Assignment[] }) 
 
   return (
     <>
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nombre, cédula, teléfono, tipo o rol/recinto..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -158,6 +217,18 @@ export function AssignmentTable({ assignments }: { assignments: Assignment[] }) 
               <TableHead>
                 <button
                   type="button"
+                  onClick={() => handleSort("phone")}
+                  className="flex items-center gap-1 font-medium"
+                >
+                  Teléfono
+                  <span className="text-xs text-muted-foreground">
+                    {sortConfig.key === "phone" ? (sortConfig.order === "asc" ? "↑" : "↓") : ""}
+                  </span>
+                </button>
+              </TableHead>
+              <TableHead>
+                <button
+                  type="button"
                   onClick={() => handleSort("type")}
                   className="flex items-center gap-1 font-medium"
                 >
@@ -183,43 +254,52 @@ export function AssignmentTable({ assignments }: { assignments: Assignment[] }) 
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedAssignments.map((assignment) => (
-              <TableRow key={assignment.id}>
-                <TableCell className="font-medium">{assignment.members.name}</TableCell>
-                <TableCell className="font-mono text-sm">{assignment.members.cedula}</TableCell>
-                <TableCell>
-                  <Badge variant={assignment.member_type === "CPE" ? "default" : "secondary"}>
-                    {assignment.member_type}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {assignment.member_type === "CPE" ? (
-                    <span className="text-sm">{getRoleLabel(assignment.role)}</span>
-                  ) : (
-                    <div className="text-sm">
-                      <p className="font-medium">{assignment.cda_precincts?.name ?? "Sin recinto"}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {[assignment.cda_precincts?.canton, assignment.cda_precincts?.parish]
-                          .filter(Boolean)
-                          .join(" / ") || "—"}
-                      </p>
-                    </div>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Link href={`/dashboard/assignments/${assignment.id}/edit`}>
-                      <Button variant="ghost" size="sm">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                    <Button variant="ghost" size="sm" onClick={() => setDeleteId(assignment.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
+            {filteredAndSortedAssignments.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                  No se encontraron resultados para "{searchTerm}"
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              filteredAndSortedAssignments.map((assignment) => (
+                <TableRow key={assignment.id}>
+                  <TableCell className="font-medium">{assignment.members.name}</TableCell>
+                  <TableCell className="font-mono text-sm">{assignment.members.cedula}</TableCell>
+                  <TableCell className="text-sm">{assignment.members.phone || "-"}</TableCell>
+                  <TableCell>
+                    <Badge variant={assignment.member_type === "CPE" ? "default" : "secondary"}>
+                      {assignment.member_type}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {assignment.member_type === "CPE" ? (
+                      <span className="text-sm">{getRoleLabel(assignment.role)}</span>
+                    ) : (
+                      <div className="text-sm">
+                        <p className="font-medium">{assignment.cda_precincts?.name ?? "Sin recinto"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {[assignment.cda_precincts?.canton, assignment.cda_precincts?.parish]
+                            .filter(Boolean)
+                            .join(" / ") || "—"}
+                        </p>
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Link href={`/dashboard/assignments/${assignment.id}/edit`}>
+                        <Button variant="ghost" size="sm">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                      <Button variant="ghost" size="sm" onClick={() => setDeleteId(assignment.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
