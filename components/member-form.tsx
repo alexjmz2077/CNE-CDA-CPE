@@ -36,6 +36,51 @@ export function MemberForm({ member }: MemberFormProps) {
     is_admin: member?.is_admin || false,
   })
 
+  const getErrorMessage = (error: any): string => {
+    // Error de cédula duplicada
+    if (error.code === "23505" && error.message.includes("members_cedula_key")) {
+      return "Ya existe un miembro registrado con esta cédula"
+    }
+
+    // Error de violación de constraint único
+    if (error.code === "23505") {
+      return "Este registro ya existe en el sistema"
+    }
+
+    // Error de violación de foreign key
+    if (error.code === "23503") {
+      return "Error de referencia: datos relacionados no encontrados"
+    }
+
+    // Error de violación de not null
+    if (error.code === "23502") {
+      return "Todos los campos requeridos deben estar completos"
+    }
+
+    // Error de violación de check constraint
+    if (error.code === "23514") {
+      return "Los datos ingresados no cumplen con las validaciones requeridas"
+    }
+
+    // Error de permisos
+    if (error.code === "42501" || error.message.includes("permission")) {
+      return "No tiene permisos suficientes para realizar esta operación"
+    }
+
+    // Error de conexión
+    if (error.message.includes("Failed to fetch") || error.message.includes("network")) {
+      return "Error de conexión. Por favor, verifique su conexión a internet"
+    }
+
+    // Si hay un mensaje específico del servidor, mostrarlo
+    if (error.message) {
+      return error.message
+    }
+
+    // Mensaje genérico como último recurso
+    return "Error al guardar el miembro. Por favor, intente nuevamente"
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
@@ -87,7 +132,8 @@ export function MemberForm({ member }: MemberFormProps) {
       router.push("/dashboard/members")
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al guardar el miembro")
+      console.error("Error al guardar miembro:", err)
+      setError(getErrorMessage(err))
     } finally {
       setIsLoading(false)
     }

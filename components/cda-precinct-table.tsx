@@ -38,7 +38,9 @@ export type PrecinctRow = {
   contact: Contact | null
 }
 
-export function CDAPrecinctTable({ precincts }: { precincts: PrecinctRow[] }) {
+type StatusFilter = "ALL" | "ENABLED" | "DISABLED"
+
+export function CDAPrecinctTable({ precincts, statusFilter }: { precincts: PrecinctRow[]; statusFilter?: StatusFilter }) {
   const router = useRouter()
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -151,7 +153,7 @@ export function CDAPrecinctTable({ precincts }: { precincts: PrecinctRow[] }) {
                 <TableCell className="max-w-xs text-sm">{precinct.address}</TableCell>
                 <TableCell>
                   <Badge variant={precinct.is_enabled ? "default" : "secondary"}>
-                    {precinct.is_enabled ? "Habilitado" : "No habilitado"}
+                    {precinct.is_enabled ? "Habilitado" : "Deshabilitado"}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-sm">

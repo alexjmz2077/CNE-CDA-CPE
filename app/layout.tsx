@@ -1,16 +1,19 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
+import { Inter } from "next/font/google"
 import "./globals.css"
+import { ThemeProvider } from "@/components/theme-provider"
 
-const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "CNE - Sistema de Gestión Electoral",
-  description: "Sistema de gestión de miembros CPE/CDA y procesos electorales",
-  generator: "v0.app",
+  title: "CNE - Sistema de Gestión",
+  description: "Sistema de Gestión de Personal Electoral",
+  icons: {
+    icon: "/images/CNE_Ecuador.webp",
+    shortcut: "/images/CNE_Ecuador.webp",
+    apple: "/images/CNE_Ecuador.webp",
+  },
 }
 
 export default function RootLayout({
@@ -19,10 +22,14 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es">
-      <body className={`font-sans antialiased`}>
-        {children}
-        <Analytics />
+    <html lang="es" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/images/CNE_Ecuador.webp" type="image/webp" />
+      </head>
+      <body className={inter.className}>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   )

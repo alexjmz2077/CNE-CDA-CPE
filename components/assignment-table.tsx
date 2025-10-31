@@ -44,6 +44,16 @@ type Assignment = {
   }
 }
 
+const CPE_ROLE_LABELS: Record<string, string> = {
+  Supervisor: "Supervisor",
+  Revisor: "Revisor de Firmas",
+  Digitador: "Digitador",
+  Archivador: "Archivo de Actas",
+  Receptor: "Receptor de Actas",
+  Operador: "Operador de Escáner",
+  Administrador: "Administrador Técnico Provincial",
+}
+
 export function AssignmentTable({ assignments }: { assignments: Assignment[] }) {
   const router = useRouter()
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -74,6 +84,11 @@ export function AssignmentTable({ assignments }: { assignments: Assignment[] }) 
     }
   }
 
+  const getRoleLabel = (role: string | null): string => {
+    if (!role) return "Sin rol"
+    return CPE_ROLE_LABELS[role] || role
+  }
+
   const sortedAssignments = useMemo(() => {
     const sorted = [...assignments].sort((a, b) => {
       const aValue = getComparableValue(a).toString().toLowerCase()
@@ -88,10 +103,7 @@ export function AssignmentTable({ assignments }: { assignments: Assignment[] }) 
     setIsDeleting(true)
     const supabase = createClient()
 
-    const { error } = await supabase
-      .from("assignments")
-      .delete()
-      .eq("id", deleteId)
+    const { error } = await supabase.from("assignments").delete().eq("id", deleteId)
 
     if (error) {
       alert("Error al eliminar la asignación")
@@ -176,16 +188,20 @@ export function AssignmentTable({ assignments }: { assignments: Assignment[] }) 
                 <TableCell className="font-medium">{assignment.members.name}</TableCell>
                 <TableCell className="font-mono text-sm">{assignment.members.cedula}</TableCell>
                 <TableCell>
-                  <Badge variant={assignment.member_type === "CPE" ? "default" : "secondary"}>{assignment.member_type}</Badge>
+                  <Badge variant={assignment.member_type === "CPE" ? "default" : "secondary"}>
+                    {assignment.member_type}
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   {assignment.member_type === "CPE" ? (
-                    <span className="text-sm">{assignment.role ?? "Sin rol"}</span>
+                    <span className="text-sm">{getRoleLabel(assignment.role)}</span>
                   ) : (
                     <div className="text-sm">
                       <p className="font-medium">{assignment.cda_precincts?.name ?? "Sin recinto"}</p>
                       <p className="text-xs text-muted-foreground">
-                        {[assignment.cda_precincts?.canton, assignment.cda_precincts?.parish].filter(Boolean).join(" / ") || "—"}
+                        {[assignment.cda_precincts?.canton, assignment.cda_precincts?.parish]
+                          .filter(Boolean)
+                          .join(" / ") || "—"}
                       </p>
                     </div>
                   )}

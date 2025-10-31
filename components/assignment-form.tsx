@@ -51,6 +51,7 @@ const CPE_ROLE_OPTIONS = [
   { value: "Archivador", label: "Archivo de Actas" },
   { value: "Receptor", label: "Receptor de Actas" },
   { value: "Operador", label: "Operador de Escáner" },
+  { value: "Administrador", label: "Administrador Técnico Provincial" },
 ]
 
 export function AssignmentForm({ assignment, processes = [], members = [], precincts = [] }: AssignmentFormProps) {

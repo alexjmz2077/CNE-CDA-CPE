@@ -19,7 +19,7 @@ import {
 const CANTON_PARISHES: Record<string, string[]> = {
   Morona: ["Macas", "9 de Octubre", "General Proaño", "San Isidro", "Sinaí", "Cuchaentza", "Río Blanco", "Zuñac"],
   Gualaquiza: ["Gualaquiza", "Bomboiza", "El Ideal", "General Proaño", "Mercedes del Salado", "Nueva Tarqui", "San Miguel de Cuyes", "Amazanga"],
-  "Limón Indanza": ["General Leonidas Plaza Gutiérrez", "Indanza", "San Antonio", "Santa Rosa de Limón", "Pan de Azúcar", "San Miguel de Conchay"],
+  "Limón Indanza": ["Gral. Leonidas Plaza Gutiérrez", "Indanza", "San Antonio", "Santa Rosa de Limón", "Pan de Azúcar", "San Miguel de Conchay"],
   Santiago: ["Santiago de Méndez", "San Luis de El Upano", "Copal", "Patuca", "Tayuza", "Chinimpi", "San Ildefonso de Limón"],
   Sucúa: ["Sucúa", "Huambi", "Asunción", "Santa Marianita de Jesús", "Logroño Grande", "Yaupi"],
   Palora: ["Palora", "Sangay", "Arapicos", "Cumandá", "Diez de Agosto", "Metentino", "Palmira"],
@@ -28,7 +28,7 @@ const CANTON_PARISHES: Record<string, string[]> = {
   Taisha: ["Taisha", "Huasaga", "Macuma", "Tuutinentza", "Pumpuentsa"],
   Logroño: ["Logroño", "Shimpis", "Yaupi", "San Agustín"],
   "Pablo Sexto": ["Pablo Sexto"],
-  Tiwintza: ["Santiago", "San José de Morona", "Santiago (Parroquia)", "Winza"],
+  Tiwintza: ["Santiago", "San José de Morona", "Santiago", "Winza"],
   "Sevilla Don Bosco": ["Sevilla Don Bosco"],
 }
 

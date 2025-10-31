@@ -5,8 +5,8 @@ export default function NewMemberPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Nuevo Miembro</h1>
-        <p className="text-muted-foreground">Registrar un nuevo miembro CPE o CDA</p>
+        <h1 className="text-3xl font-bold">Nuevo Personal</h1>
+        <p className="text-muted-foreground">Registrar a nuevo personal </p>
       </div>
 
       <Card>

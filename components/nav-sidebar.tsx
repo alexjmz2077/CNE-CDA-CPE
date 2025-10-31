@@ -5,7 +5,8 @@ import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
-import { LayoutDashboard, Users, Calendar, UserCheck, LogOut, Building2, Building2Icon } from "lucide-react"
+import Image from "next/image"
+import { LayoutDashboard, Users, Calendar, UserCheck, LogOut, Building2 } from "lucide-react"
 
 export function NavSidebar() {
   const router = useRouter()
@@ -43,14 +44,23 @@ export function NavSidebar() {
       title: "Recintos",
       href: "/dashboard/cda-precincts",
       icon: Building2,
-    }
+    },
   ]
 
   return (
     <div className="flex h-full w-52 flex-col border-r bg-card">
       <div className="border-b p-6">
-        <h1 className="text-2xl font-bold text-primary">CNE</h1>
-        <p className="text-sm text-muted-foreground">Sistema de Gestión Electoral</p>
+        <div className="flex items-center gap-3">
+          <Image
+            src="/images/CNE_Ecuador.webp"
+            alt="Logo CNE"
+            width={60}
+            height={40}
+            className="object-contain"
+          />
+
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground">Sistema de Gestión de Personal</p>
       </div>
       <nav className="flex-1 space-y-1 p-4">
         {navItems.map((item) => {
