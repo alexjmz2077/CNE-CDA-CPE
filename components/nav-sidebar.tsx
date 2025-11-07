@@ -44,7 +44,7 @@ export function NavSidebar() {
       title: "Recintos",
       href: "/dashboard/cda-precincts",
       icon: Building2,
-    },
+    }
   ]
 
   return (

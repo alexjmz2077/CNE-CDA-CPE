@@ -41,6 +41,7 @@ type Assignment = {
   members: {
     id: string
     name: string
+    second_name: string | null
     cedula: string
     phone: string | null
   }
@@ -66,21 +67,48 @@ export function AssignmentTable({ assignments, onFilteredAssignmentsChange }: As
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [sortConfig, setSortConfig] = useState<{ key: "member" | "cedula" | "phone" | "type" | "role"; order: "asc" | "desc" }>({
-    key: "member",
-    order: "asc",
-  })
+  const [sortConfig, setSortConfig] = useState<Array<{ key: "member" | "cedula" | "phone" | "type" | "role"; order: "asc" | "desc" }>>([
+    { key: "member", order: "asc" }
+  ])
 
-  const handleSort = (key: "member" | "cedula" | "phone" | "type" | "role") => {
-    setSortConfig((current) =>
-      current.key === key ? { key, order: current.order === "asc" ? "desc" : "asc" } : { key, order: "asc" },
-    )
+  const handleSort = (key: "member" | "cedula" | "phone" | "type" | "role", ctrlKey: boolean = false) => {
+    setSortConfig((current) => {
+      const existingIndex = current.findIndex(sort => sort.key === key)
+      
+      if (!ctrlKey) {
+        // Sin Ctrl: ordenar solo por esta columna
+        if (existingIndex === 0 && current.length === 1) {
+          // Si es la única columna, alternar orden
+          return [{ key, order: current[0].order === "asc" ? "desc" : "asc" }]
+        }
+        // Nueva columna o cambiar a solo esta
+        return [{ key, order: "asc" }]
+      } else {
+        // Con Ctrl: multi-columna
+        if (existingIndex !== -1) {
+          // Si ya existe, alternar su orden
+          const newConfig = [...current]
+          newConfig[existingIndex] = {
+            ...newConfig[existingIndex],
+            order: newConfig[existingIndex].order === "asc" ? "desc" : "asc"
+          }
+          return newConfig
+        } else {
+          // Agregar nueva columna al final
+          return [...current, { key, order: "asc" }]
+        }
+      }
+    })
   }
 
-  const getComparableValue = (assignment: Assignment) => {
-    switch (sortConfig.key) {
+  const getFullName = (member: { name: string; second_name: string | null }) => {
+    return [member.second_name, member.name].filter(Boolean).join(" ")
+  }
+
+  const getComparableValue = (assignment: Assignment, key: "member" | "cedula" | "phone" | "type" | "role") => {
+    switch (key) {
       case "member":
-        return assignment.members.name ?? ""
+        return getFullName(assignment.members)
       case "cedula":
         return assignment.members.cedula ?? ""
       case "phone":
@@ -105,7 +133,7 @@ export function AssignmentTable({ assignments, onFilteredAssignmentsChange }: As
     if (searchTerm) {
       const term = searchTerm.toLowerCase()
       filtered = assignments.filter((assignment) => {
-        const memberName = assignment.members?.name?.toLowerCase() || ""
+        const fullName = getFullName(assignment.members).toLowerCase()
         const cedula = assignment.members?.cedula?.toLowerCase() || ""
         const phone = assignment.members?.phone?.toLowerCase() || ""
         const type = assignment.member_type?.toLowerCase() || ""
@@ -117,7 +145,7 @@ export function AssignmentTable({ assignments, onFilteredAssignmentsChange }: As
           : ""
 
         return (
-          memberName.includes(term) ||
+          fullName.includes(term) ||
           cedula.includes(term) ||
           phone.includes(term) ||
           type.includes(term) ||
@@ -127,13 +155,21 @@ export function AssignmentTable({ assignments, onFilteredAssignmentsChange }: As
       })
     }
 
-    // Luego ordenar
+    // Luego ordenar con multi-columna
     const sorted = [...filtered].sort((a, b) => {
-      const aValue = getComparableValue(a)
-      const bValue = getComparableValue(b)
-      return sortConfig.order === "asc"
-        ? aValue.localeCompare(bValue, "es", { sensitivity: "base" })
-        : bValue.localeCompare(aValue, "es", { sensitivity: "base" })
+      for (const sort of sortConfig) {
+        const aValue = getComparableValue(a, sort.key)
+        const bValue = getComparableValue(b, sort.key)
+        
+        const comparison = sort.order === "asc"
+          ? aValue.localeCompare(bValue, "es", { sensitivity: "base" })
+          : bValue.localeCompare(aValue, "es", { sensitivity: "base" })
+        
+        if (comparison !== 0) {
+          return comparison
+        }
+      }
+      return 0
     })
     return sorted
   }, [assignments, sortConfig, searchTerm])
@@ -184,6 +220,9 @@ export function AssignmentTable({ assignments, onFilteredAssignmentsChange }: As
             className="pl-10"
           />
         </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          💡 Mantén presionado Ctrl/Cmd al hacer clic en los encabezados para ordenar por múltiples columnas
+        </p>
       </div>
 
       <div className="rounded-md border">
@@ -193,61 +232,86 @@ export function AssignmentTable({ assignments, onFilteredAssignmentsChange }: As
               <TableHead>
                 <button
                   type="button"
-                  onClick={() => handleSort("member")}
+                  onClick={(e) => handleSort("member", e.ctrlKey || e.metaKey)}
                   className="flex items-center gap-1 font-medium"
                 >
                   Miembro
-                  <span className="text-xs text-muted-foreground">
-                    {sortConfig.key === "member" ? (sortConfig.order === "asc" ? "↑" : "↓") : ""}
-                  </span>
+                  {sortConfig.find(s => s.key === "member") && (
+                    <span className="text-xs">
+                      {sortConfig.find(s => s.key === "member")?.order === "asc" ? "↑" : "↓"}
+                      {sortConfig.length > 1 && (
+                        <sup className="ml-0.5">{sortConfig.findIndex(s => s.key === "member") + 1}</sup>
+                      )}
+                    </span>
+                  )}
                 </button>
               </TableHead>
               <TableHead>
                 <button
                   type="button"
-                  onClick={() => handleSort("cedula")}
+                  onClick={(e) => handleSort("cedula", e.ctrlKey || e.metaKey)}
                   className="flex items-center gap-1 font-medium"
                 >
                   Cédula
-                  <span className="text-xs text-muted-foreground">
-                    {sortConfig.key === "cedula" ? (sortConfig.order === "asc" ? "↑" : "↓") : ""}
-                  </span>
+                  {sortConfig.find(s => s.key === "cedula") && (
+                    <span className="text-xs">
+                      {sortConfig.find(s => s.key === "cedula")?.order === "asc" ? "↑" : "↓"}
+                      {sortConfig.length > 1 && (
+                        <sup className="ml-0.5">{sortConfig.findIndex(s => s.key === "cedula") + 1}</sup>
+                      )}
+                    </span>
+                  )}
                 </button>
               </TableHead>
               <TableHead>
                 <button
                   type="button"
-                  onClick={() => handleSort("phone")}
+                  onClick={(e) => handleSort("phone", e.ctrlKey || e.metaKey)}
                   className="flex items-center gap-1 font-medium"
                 >
                   Teléfono
-                  <span className="text-xs text-muted-foreground">
-                    {sortConfig.key === "phone" ? (sortConfig.order === "asc" ? "↑" : "↓") : ""}
-                  </span>
+                  {sortConfig.find(s => s.key === "phone") && (
+                    <span className="text-xs">
+                      {sortConfig.find(s => s.key === "phone")?.order === "asc" ? "↑" : "↓"}
+                      {sortConfig.length > 1 && (
+                        <sup className="ml-0.5">{sortConfig.findIndex(s => s.key === "phone") + 1}</sup>
+                      )}
+                    </span>
+                  )}
                 </button>
               </TableHead>
               <TableHead>
                 <button
                   type="button"
-                  onClick={() => handleSort("type")}
+                  onClick={(e) => handleSort("type", e.ctrlKey || e.metaKey)}
                   className="flex items-center gap-1 font-medium"
                 >
                   Tipo
-                  <span className="text-xs text-muted-foreground">
-                    {sortConfig.key === "type" ? (sortConfig.order === "asc" ? "↑" : "↓") : ""}
-                  </span>
+                  {sortConfig.find(s => s.key === "type") && (
+                    <span className="text-xs">
+                      {sortConfig.find(s => s.key === "type")?.order === "asc" ? "↑" : "↓"}
+                      {sortConfig.length > 1 && (
+                        <sup className="ml-0.5">{sortConfig.findIndex(s => s.key === "type") + 1}</sup>
+                      )}
+                    </span>
+                  )}
                 </button>
               </TableHead>
               <TableHead>
                 <button
                   type="button"
-                  onClick={() => handleSort("role")}
+                  onClick={(e) => handleSort("role", e.ctrlKey || e.metaKey)}
                   className="flex items-center gap-1 font-medium"
                 >
                   Rol/Recinto
-                  <span className="text-xs text-muted-foreground">
-                    {sortConfig.key === "role" ? (sortConfig.order === "asc" ? "↑" : "↓") : ""}
-                  </span>
+                  {sortConfig.find(s => s.key === "role") && (
+                    <span className="text-xs">
+                      {sortConfig.find(s => s.key === "role")?.order === "asc" ? "↑" : "↓"}
+                      {sortConfig.length > 1 && (
+                        <sup className="ml-0.5">{sortConfig.findIndex(s => s.key === "role") + 1}</sup>
+                      )}
+                    </span>
+                  )}
                 </button>
               </TableHead>
               <TableHead className="text-right">Acciones</TableHead>
@@ -263,7 +327,7 @@ export function AssignmentTable({ assignments, onFilteredAssignmentsChange }: As
             ) : (
               filteredAndSortedAssignments.map((assignment) => (
                 <TableRow key={assignment.id}>
-                  <TableCell className="font-medium">{assignment.members.name}</TableCell>
+                  <TableCell className="font-medium">{getFullName(assignment.members)}</TableCell>
                   <TableCell className="font-mono text-sm">{assignment.members.cedula}</TableCell>
                   <TableCell className="text-sm">{assignment.members.phone || "-"}</TableCell>
                   <TableCell>

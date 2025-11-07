@@ -18,6 +18,7 @@ type Process = {
 type Member = {
   id: string
   name: string
+  second_name: string | null
   cedula: string
 }
 
@@ -151,6 +152,10 @@ export function AssignmentForm({ assignment, processes = [], members = [], preci
     }
   }
 
+  const getFullName = (member: Member) => {
+    return [member.name, member.second_name].filter(Boolean).join(" ")
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2">
@@ -181,7 +186,7 @@ export function AssignmentForm({ assignment, processes = [], members = [], preci
             emptyText="No se encontraron miembros"
             items={members.map((member) => ({
               value: member.id,
-              label: member.name,
+              label: getFullName(member),
               description: member.cedula,
             }))}
             value={formData.member_id}

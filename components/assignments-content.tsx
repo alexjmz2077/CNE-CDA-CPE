@@ -37,6 +37,7 @@ type Assignment = {
   members: {
     id: string
     name: string
+    second_name: string | null
     cedula: string
     phone: string | null
   }
@@ -69,10 +70,14 @@ export function AssignmentsContent({
 
   const selectedProcess = processes.find((p) => p.id === selectedProcessId)
 
+  const getFullName = (member: { name: string; second_name: string | null }) => {
+    return [member.second_name, member.name].filter(Boolean).join(" ")
+  }
+
   const exportData = useMemo(
     () =>
       filteredAssignments.map((assignment) => ({
-        Miembro: assignment.members?.name ?? "-",
+        Miembro: getFullName(assignment.members) || "-",
         Cédula: assignment.members?.cedula ?? "-",
         Teléfono: assignment.members?.phone ?? "-",
         Tipo: assignment.member_type,

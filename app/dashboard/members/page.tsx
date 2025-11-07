@@ -13,6 +13,7 @@ type Member = {
   id: string;
   cedula: string;
   name: string;
+  second_name: string | null;
   phone: string | null;
   email: string | null;
   address: string | null;
@@ -29,8 +30,8 @@ export default function MembersPage() {
       const supabase = createClient();
       const { data, error } = await supabase
         .from("members")
-        .select("id, cedula, name, phone, email, address, created_at")
-        .order("name");
+        .select("id, cedula, name, second_name, phone, email, address, created_at")
+        .order("created_at", { ascending: false });
 
       if (!error && data) {
         setMembers(data);
@@ -44,7 +45,8 @@ export default function MembersPage() {
 
   const exportData = filteredMembers.map((member) => ({
     Cédula: member.cedula,
-    Nombre: member.name,
+    Apellidos: member.second_name || "-",
+    Nombres: member.name,
     Teléfono: member.phone || "-",
     Email: member.email || "-",
   }));

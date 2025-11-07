@@ -24,6 +24,7 @@ type Member = {
   id: string
   cedula: string
   name: string
+  second_name: string | null
   phone: string | null
   email: string | null
   address: string | null
@@ -52,19 +53,22 @@ export function MemberTable({ members, currentFilter, onFilteredMembersChange }:
     )
   }
 
+  const getFullName = (member: Member) => {
+    return [member.second_name, member.name].filter(Boolean).join(" ")
+  }
+
   const getComparableValue = (member: Member) => {
     switch (sortConfig.key) {
       case "cedula":
         return member.cedula ?? ""
       case "name":
-        return member.name ?? ""
+        return getFullName(member)
       default:
         return ""
     }
   }
 
   const filteredAndSortedMembers = useMemo(() => {
-    // Primero filtrar por búsqueda
     let filtered = members
     if (searchTerm) {
       const term = searchTerm.toLowerCase()
@@ -72,12 +76,13 @@ export function MemberTable({ members, currentFilter, onFilteredMembersChange }:
         (member) =>
           member.cedula.toLowerCase().includes(term) ||
           member.name.toLowerCase().includes(term) ||
+          member.second_name?.toLowerCase().includes(term) ||
+          getFullName(member).toLowerCase().includes(term) ||
           member.phone?.toLowerCase().includes(term) ||
           member.email?.toLowerCase().includes(term),
       )
     }
 
-    // Luego ordenar
     const sorted = [...filtered].sort((a, b) => {
       const aValue = getComparableValue(a)
       const bValue = getComparableValue(b)
@@ -88,7 +93,6 @@ export function MemberTable({ members, currentFilter, onFilteredMembersChange }:
     return sorted
   }, [members, sortConfig, searchTerm])
 
-  // Notificar al padre cuando cambien los miembros filtrados
   useEffect(() => {
     if (onFilteredMembersChange) {
       onFilteredMembersChange(filteredAndSortedMembers)
@@ -136,7 +140,7 @@ export function MemberTable({ members, currentFilter, onFilteredMembersChange }:
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar por cédula, nombre, teléfono o email..."
+            placeholder="Buscar por cédula, nombre, apellido, teléfono o email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -166,7 +170,7 @@ export function MemberTable({ members, currentFilter, onFilteredMembersChange }:
                   onClick={() => handleSort("name")}
                   className="flex items-center gap-1 font-medium"
                 >
-                  Nombre
+                  Nombre Completo
                   <span className="text-xs text-muted-foreground">
                     {sortConfig.key === "name" ? (sortConfig.order === "asc" ? "↑" : "↓") : ""}
                   </span>
@@ -188,7 +192,7 @@ export function MemberTable({ members, currentFilter, onFilteredMembersChange }:
               filteredAndSortedMembers.map((member) => (
                 <TableRow key={member.id}>
                   <TableCell className="font-mono text-sm">{member.cedula}</TableCell>
-                  <TableCell className="font-medium">{member.name}</TableCell>
+                  <TableCell className="font-medium">{getFullName(member)}</TableCell>
                   <TableCell>{member.phone || "-"}</TableCell>
                   <TableCell>{member.email || "-"}</TableCell>
                   <TableCell className="text-right">

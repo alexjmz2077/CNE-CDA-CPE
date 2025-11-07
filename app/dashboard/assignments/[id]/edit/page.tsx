@@ -7,16 +7,35 @@ export default async function EditAssignmentPage({ params }: { params: Promise<{
   const { id } = await params
   const supabase = await createClient()
 
-  const [{ data: assignment }, { data: processes }, { data: members }, { data: precincts }] = await Promise.all([
-    supabase.from("assignments").select("*").eq("id", id).single(),
-    supabase.from("electoral_processes").select("id, name").order("name"),
-    supabase.from("members").select("id, name, cedula").order("name"),
-    supabase
-      .from("cda_precincts")
-      .select("id, code, name, canton, parish")
-      .eq("is_enabled", true)
-      .order("name"),
-  ])
+  const { data: assignment } = await supabase
+    .from("assignments")
+    .select(`
+      id,
+      process_id,
+      member_id,
+      member_type,
+      role,
+      cda_precinct_id,
+      members (
+        id,
+        name,
+        second_name,
+        cedula
+      )
+    `)
+    .eq("id", id)
+    .single()
+
+  const { data: processes } = await supabase.from("electoral_processes").select("id, name").order("name")
+  const { data: members } = await supabase
+    .from("members")
+    .select("id, name, second_name, cedula")
+    .order("name", { ascending: true })
+  const { data: precincts } = await supabase
+    .from("cda_precincts")
+    .select("id, code, second_name, name, canton, parish")
+    .eq("is_enabled", true)
+    .order("name")
 
   if (!assignment) {
     notFound()

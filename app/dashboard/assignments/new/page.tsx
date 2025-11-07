@@ -7,7 +7,10 @@ export default async function NewAssignmentPage() {
 
   const [{ data: processes }, { data: members }, { data: precincts }] = await Promise.all([
     supabase.from("electoral_processes").select("id, name").order("created_at", { ascending: false }),
-    supabase.from("members").select("id, name, cedula").order("name"),
+    supabase
+      .from("members")
+      .select("id, name, second_name, cedula")
+      .order("name", { ascending: true }),
     supabase
       .from("cda_precincts")
       .select("id, code, name, canton, parish")

@@ -1,6 +1,33 @@
 import { createClient } from "@/lib/supabase/server"
 import { AssignmentsContent } from "@/components/assignments-content"
 
+type Assignment = {
+  id: string
+  process_id: string
+  member_id: string
+  member_type: "CPE" | "CDA"
+  role: string | null
+  cda_precinct_id: string | null
+  cda_precincts: {
+    id: string
+    name: string
+    canton: string | null
+    parish: string | null
+  } | null
+  created_at: string
+  electoral_processes: {
+    id: string
+    name: string
+  }
+  members: {
+    id: string
+    name: string
+    second_name: string | null
+    cedula: string
+    phone: string | null
+  }
+}
+
 export default async function AssignmentsPage({
   searchParams,
 }: {
@@ -29,25 +56,47 @@ export default async function AssignmentsPage({
     .order("start_date", { ascending: false })
 
   // Fetch assignments only if a process is selected
-  let assignmentsData = []
-  let assignmentsError = null
+  let assignmentsData: Assignment[] = []
+  let assignmentsError: string | null = null
 
   if (selectedProcessId) {
     const { data, error } = await supabase
       .from("assignments")
       .select(
         `
-        *,
-        electoral_processes(id, name),
-        members(id, name, cedula, phone),
-        cda_precincts(id, name, canton, parish)
+        id,
+        process_id,
+        member_id,
+        member_type,
+        role,
+        cda_precinct_id,
+        created_at,
+        electoral_processes (
+          id,
+          name
+        ),
+        members (
+          id,
+          name,
+          second_name,
+          cedula,
+          phone
+        ),
+        cda_precincts (
+          id,
+          name,
+          canton,
+          parish
+        )
       `,
       )
       .eq("process_id", selectedProcessId)
       .order("created_at", { ascending: false })
 
-    assignmentsData = data || []
-    assignmentsError = error
+    if (data) {
+      assignmentsData = data as any as Assignment[]
+    }
+    assignmentsError = error?.message || null
   }
 
   return (
@@ -55,7 +104,7 @@ export default async function AssignmentsPage({
       processes={processes || []}
       selectedProcessId={selectedProcessId}
       assignments={assignmentsData}
-      assignmentsError={assignmentsError?.message}
+      assignmentsError={assignmentsError}
       initialMemberType={initialMemberType}
     />
   )

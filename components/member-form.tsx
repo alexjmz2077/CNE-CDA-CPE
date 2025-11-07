@@ -16,6 +16,7 @@ type MemberFormProps = {
     id: string
     cedula: string
     name: string
+    second_name: string | null
     phone: string | null
     email: string | null
     address: string | null
@@ -30,6 +31,7 @@ export function MemberForm({ member }: MemberFormProps) {
   const [formData, setFormData] = useState({
     cedula: member?.cedula || "",
     name: member?.name || "",
+    second_name: member?.second_name || "",
     phone: member?.phone || "",
     email: member?.email || "",
     address: member?.address || "",
@@ -105,6 +107,7 @@ export function MemberForm({ member }: MemberFormProps) {
           .update({
             cedula: formData.cedula,
             name: formData.name,
+            second_name: formData.second_name || null,
             phone: formData.phone || null,
             email: formData.email || null,
             address: formData.address || null,
@@ -119,6 +122,7 @@ export function MemberForm({ member }: MemberFormProps) {
         const { error } = await supabase.from("members").insert({
           cedula: formData.cedula,
           name: formData.name,
+          second_name: formData.second_name || null,
           phone: formData.phone || null,
           email: formData.email || null,
           address: formData.address || null,
@@ -154,16 +158,29 @@ export function MemberForm({ member }: MemberFormProps) {
           />
         </div>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="name">Nombre Completo</Label>
-        <Input
-          id="name"
-          placeholder="Juan Pérez García"
-          required
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          disabled={isLoading}
-        />
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="name">Nombres</Label>
+          <Input
+            id="name"
+            placeholder="Juan Carlos"
+            required
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            disabled={isLoading}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="second_name">Apellidos</Label>
+          <Input
+            id="second_name"
+            placeholder="Pérez García"
+            required
+            value={formData.second_name}
+            onChange={(e) => setFormData({ ...formData, second_name: e.target.value })}
+            disabled={isLoading}
+          />
+        </div>
       </div>
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-2">
