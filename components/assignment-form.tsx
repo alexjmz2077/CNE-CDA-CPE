@@ -47,12 +47,12 @@ type AssignmentFormProps = {
 
 const CPE_ROLE_OPTIONS = [
   { value: "Supervisor", label: "Supervisor" },
-  { value: "Revisor", label: "Revisor de Firmas" },
+  { value: "Revisor de Firmas", label: "Revisor de Firmas" },
   { value: "Digitador", label: "Digitador" },
-  { value: "Archivador", label: "Archivo de Actas" },
-  { value: "Receptor", label: "Receptor de Actas" },
-  { value: "Operador", label: "Operador de Escáner" },
-  { value: "Administrador", label: "Administrador Técnico Provincial" },
+  { value: "Archivador de Actas", label: "Archivador de Actas" },
+  { value: "Receptor de Actas", label: "Receptor de Actas" },
+  { value: "Operador de Escáner", label: "Operador de Escáner" },
+  { value: "Administrador Técnico Provincial", label: "Administrador Técnico Provincial" },
 ]
 
 export function AssignmentForm({ assignment, processes = [], members = [], precincts = [] }: AssignmentFormProps) {

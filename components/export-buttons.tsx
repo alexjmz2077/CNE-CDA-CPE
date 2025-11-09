@@ -20,17 +20,33 @@ export function ExportButtons({ data, filename, title, enableCredentials = false
   const handleExport = async (format: "csv" | "xlsx" | "pdf" | "credentials") => {
     setIsExporting(true)
     try {
+      // Mapear los datos una sola vez para CSV, XLSX y PDF
+      const processedDataForTable = data.map((item) => {
+        const rol = item.member_type === 'CDA'
+          ? `Recinto: ${item.cda_precincts?.name || 'N/A'}`
+          : item.role || 'N/A'
+
+        return {
+          "Cédula": item.members?.cedula || "",
+          "Miembro": `${item.members?.name || ""} ${item.members?.second_name || ""}`.trim(),
+          "Telefono": item.members?.phone || "N/A",
+          "Tipo": item.member_type,
+          "Rol": rol,
+        }
+      })
+
       switch (format) {
         case "csv":
-          exportToCSV(data, filename)
+          exportToCSV(processedDataForTable, filename)
           break
         case "xlsx":
-          await exportToExcel(data, filename)
+          await exportToExcel(processedDataForTable, filename)
           break
         case "pdf":
-          await exportToPDF(data, filename, title)
+          await exportToPDF(processedDataForTable, filename, title)
           break
         case "credentials":
+          // La exportación de credenciales mantiene su propia lógica de mapeo
           const credentialsData = data.map((item) => ({
             name: item.members?.name || "",
             secondName: item.members?.second_name || "",
@@ -65,15 +81,15 @@ export function ExportButtons({ data, filename, title, enableCredentials = false
         )}
         <DropdownMenuItem onClick={() => handleExport("csv")}>
           <File className="mr-2 h-4 w-4" />
-          Exportar CSV
+          Listado CSV
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => handleExport("xlsx")}>
           <FileSpreadsheet className="mr-2 h-4 w-4" />
-          Exportar Excel
+          Listado Excel
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => handleExport("pdf")}>
           <FileText className="mr-2 h-4 w-4" />
-          Exportar PDF
+          Listado PDF
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
