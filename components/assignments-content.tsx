@@ -107,7 +107,12 @@ export function AssignmentsContent({
         </div>
         <div className="flex gap-2">
           {selectedProcessId ? (
-            <ExportButtons data={exportData} filename="asignaciones" title={pdfTitle} />
+            <ExportButtons
+              data={filteredAssignments}
+              filename={`asignaciones_${selectedProcess?.name || 'proceso'}`}
+              title={`Asignaciones - ${selectedProcess?.name || 'Proceso Electoral'}`}
+              enableCredentials={true}
+            />
           ) : null}
           <Link href="/dashboard/assignments/new">
             <Button className="gap-2">

@@ -2,20 +2,22 @@
 
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Download, FileSpreadsheet, FileText, File } from "lucide-react"
+import { Download, FileSpreadsheet, FileText, File, IdCard } from "lucide-react"
 import { exportToCSV, exportToExcel, exportToPDF } from "@/lib/export-utils"
+import { exportCredentials } from "@/lib/export-credentials"
 import { useState } from "react"
 
 type ExportButtonsProps = {
   data: any[]
   filename: string
   title: string
+  enableCredentials?: boolean
 }
 
-export function ExportButtons({ data, filename, title }: ExportButtonsProps) {
+export function ExportButtons({ data, filename, title, enableCredentials = false }: ExportButtonsProps) {
   const [isExporting, setIsExporting] = useState(false)
 
-  const handleExport = async (format: "csv" | "xlsx" | "pdf") => {
+  const handleExport = async (format: "csv" | "xlsx" | "pdf" | "credentials") => {
     setIsExporting(true)
     try {
       switch (format) {
@@ -27,6 +29,15 @@ export function ExportButtons({ data, filename, title }: ExportButtonsProps) {
           break
         case "pdf":
           await exportToPDF(data, filename, title)
+          break
+        case "credentials":
+          const credentialsData = data.map((item) => ({
+            name: item.members?.name || "",
+            secondName: item.members?.second_name || "",
+            cedula: item.members?.cedula || "",
+            role: item.role || item.member_type || "",
+          }))
+          await exportCredentials(credentialsData, title)
           break
       }
     } catch (error) {
@@ -46,6 +57,12 @@ export function ExportButtons({ data, filename, title }: ExportButtonsProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        {enableCredentials && (
+          <DropdownMenuItem onClick={() => handleExport("credentials")}>
+            <IdCard className="mr-2 h-4 w-4" />
+            Exportar Credenciales
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onClick={() => handleExport("csv")}>
           <File className="mr-2 h-4 w-4" />
           Exportar CSV
