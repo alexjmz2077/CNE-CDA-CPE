@@ -20,20 +20,30 @@ export function ExportButtons({ data, filename, title, enableCredentials = false
   const handleExport = async (format: "csv" | "xlsx" | "pdf" | "credentials") => {
     setIsExporting(true)
     try {
-      // Mapear los datos una sola vez para CSV, XLSX y PDF
-      const processedDataForTable = data.map((item) => {
-        const rol = item.member_type === 'CDA'
-          ? `Recinto: ${item.cda_precincts?.name || 'N/A'}`
-          : item.role || 'N/A'
+      // Si los datos ya vienen procesados (sin la estructura de members/cda_precincts), usarlos directamente
+      const isAssignmentData = data.length > 0 && data[0].members !== undefined
+      
+      let processedDataForTable
+      
+      if (isAssignmentData) {
+        // Lógica para asignaciones
+        processedDataForTable = data.map((item) => {
+          const rol = item.member_type === 'CDA'
+            ? `Recinto: ${item.cda_precincts?.name || 'N/A'}`
+            : item.role || 'N/A'
 
-        return {
-          "Cédula": item.members?.cedula || "",
-          "Miembro": `${item.members?.name || ""} ${item.members?.second_name || ""}`.trim(),
-          "Telefono": item.members?.phone || "N/A",
-          "Tipo": item.member_type,
-          "Rol": rol,
-        }
-      })
+          return {
+            "Cédula": item.members?.cedula || "",
+            "Miembro": `${item.members?.name || ""} ${item.members?.second_name || ""}`.trim(),
+            "Telefono": item.members?.phone || "N/A",
+            "Tipo": item.member_type,
+            "Rol": rol,
+          }
+        })
+      } else {
+        // Para otros tipos de datos (miembros, procesos, recintos), usar directamente
+        processedDataForTable = data
+      }
 
       switch (format) {
         case "csv":
@@ -46,7 +56,11 @@ export function ExportButtons({ data, filename, title, enableCredentials = false
           await exportToPDF(processedDataForTable, filename, title)
           break
         case "credentials":
-          // La exportación de credenciales mantiene su propia lógica de mapeo
+          // La exportación de credenciales solo funciona para asignaciones
+          if (!isAssignmentData) {
+            alert("La exportación de credenciales solo está disponible para asignaciones")
+            return
+          }
           const credentialsData = data.map((item) => ({
             name: item.members?.name || "",
             secondName: item.members?.second_name || "",

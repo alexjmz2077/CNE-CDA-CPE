@@ -23,35 +23,40 @@ const getRoleDisplay = (role: string): string => {
 
 export async function exportCredentials(data: CredentialData[], processName: string) {
   const pdf = new jsPDF({
-    orientation: "landscape",
+    orientation: "portrait", // Cambiado a portrait
     unit: "cm",
     format: "a4",
   })
 
   const pageWidth = pdf.internal.pageSize.getWidth()
   const pageHeight = pdf.internal.pageSize.getHeight()
-  const credentialWidth = 9 // cm
-  const credentialHeight = 13 // cm
-  const margin = (pageWidth - (credentialWidth * 2)) / 3 // Espacio entre credenciales
+  const credentialWidth = 9 // cm (mantiene el mismo tamaño)
+  const credentialHeight = 13 // cm (mantiene el mismo tamaño)
+  
+  // Calcular márgenes para centrar las credenciales
+  const horizontalMargin = (pageWidth - credentialWidth * 2) / 3 // Espacio entre y alrededor de las columnas
+  const verticalMargin = (pageHeight - credentialHeight * 2) / 3 // Espacio entre y alrededor de las filas
 
   let credentialCount = 0
 
   for (let i = 0; i < data.length; i++) {
     const member = data[i]
-    const position = credentialCount % 2 // 0 = izquierda, 1 = derecha
+    const positionInPage = credentialCount % 4 // 0, 1, 2, 3
     
-    // Si es la tercera credencial (índice 2, 4, 6...), agregar nueva página
-    if (credentialCount > 0 && credentialCount % 2 === 0) {
+    // Si es la quinta credencial (índice 4, 8, 12...), agregar nueva página
+    if (credentialCount > 0 && credentialCount % 4 === 0) {
       pdf.addPage()
     }
 
-    // Calcular posición X de la credencial
-    const xOffset = position === 0 
-      ? margin 
-      : margin * 2 + credentialWidth
+    // Calcular posición basada en una cuadrícula 2x2
+    const col = positionInPage % 2 // 0 = izquierda, 1 = derecha
+    const row = Math.floor(positionInPage / 2) // 0 = arriba, 1 = abajo
 
-    // Calcular posición Y centrada verticalmente
-    const yOffset = (pageHeight - credentialHeight) / 2
+    // Calcular posición X de la credencial
+    const xOffset = horizontalMargin + col * (credentialWidth + horizontalMargin)
+
+    // Calcular posición Y de la credencial
+    const yOffset = verticalMargin + row * (credentialHeight + verticalMargin)
 
     // Dibujar borde de credencial
     pdf.setDrawColor(200)
@@ -71,6 +76,38 @@ export async function exportCredentials(data: CredentialData[], processName: str
       console.error("Error loading CNE image:", error)
     }
 
+    // Agregar figura decorativa azul en esquina superior derecha
+    const curveSize = 2.5 // Tamaño de la curva en cm
+    const curveX = xOffset + credentialWidth
+    const curveY = yOffset
+    
+    // Dibujar la figura curva azul
+    pdf.setFillColor(41, 101, 171) // Color #2965ab
+    pdf.setDrawColor(41, 101, 171)
+    
+    // Crear path para la figura curva
+    // Comenzar en la esquina superior derecha
+    pdf.moveTo(curveX, curveY)
+    
+    // Línea hacia abajo
+    pdf.lineTo(curveX, curveY + curveSize)
+    
+    // Curva bezier cuadrática hacia la izquierda
+    // Punto de control en el medio para crear la curva
+    const controlX = curveX - curveSize * 0.01
+    const controlY = curveY + curveSize * 0.01
+    pdf.curveTo(
+      curveX, curveY + curveSize,           // Punto inicial
+      controlX, controlY,                    // Punto de control
+      curveX - curveSize, curveY             // Punto final
+    )
+    
+    // Línea de regreso a la esquina
+    pdf.lineTo(curveX, curveY)
+    
+    // Rellenar la figura
+    pdf.fill()
+
     // Área de foto - rectángulo vertical con bordes redondeados
     const photoWidth = 3 // cm
     const photoHeight = 4 // cm
@@ -86,7 +123,7 @@ export async function exportCredentials(data: CredentialData[], processName: str
 
     // Campos de texto - más arriba para no solaparse
     const fieldsY = yOffset + 7.5
-    const fieldHeight = 1.1 // Incrementado de 0.9 a 1.1
+    const fieldHeight = 1.1
     const fieldMargin = 0.2
 
     // Nombres
