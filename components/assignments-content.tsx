@@ -12,6 +12,7 @@ import { ExportButtons } from "@/components/export-buttons"
 type Process = {
   id: string
   name: string
+  image_url?: string | null
 }
 
 type MemberTypeFilter = "ALL" | "CPE" | "CDA"
@@ -112,6 +113,7 @@ export function AssignmentsContent({
               filename={`asignaciones_${selectedProcess?.name || 'proceso'}`}
               title={`Asignaciones - ${selectedProcess?.name || 'Proceso Electoral'}`}
               enableCredentials={true}
+              processImageUrl={selectedProcess?.image_url}
             />
           ) : null}
           <Link href="/dashboard/assignments/new">

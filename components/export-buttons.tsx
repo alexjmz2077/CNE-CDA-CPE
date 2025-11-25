@@ -12,21 +12,26 @@ type ExportButtonsProps = {
   filename: string
   title: string
   enableCredentials?: boolean
+  processImageUrl?: string | null
 }
 
-export function ExportButtons({ data, filename, title, enableCredentials = false }: ExportButtonsProps) {
+export function ExportButtons({ 
+  data, 
+  filename, 
+  title, 
+  enableCredentials = false,
+  processImageUrl 
+}: ExportButtonsProps) {
   const [isExporting, setIsExporting] = useState(false)
 
   const handleExport = async (format: "csv" | "xlsx" | "pdf" | "credentials") => {
     setIsExporting(true)
     try {
-      // Si los datos ya vienen procesados (sin la estructura de members/cda_precincts), usarlos directamente
       const isAssignmentData = data.length > 0 && data[0].members !== undefined
       
       let processedDataForTable
       
       if (isAssignmentData) {
-        // Lógica para asignaciones
         processedDataForTable = data.map((item) => {
           const rol = item.member_type === 'CDA'
             ? `Recinto: ${item.cda_precincts?.name || 'N/A'}`
@@ -41,7 +46,6 @@ export function ExportButtons({ data, filename, title, enableCredentials = false
           }
         })
       } else {
-        // Para otros tipos de datos (miembros, procesos, recintos), usar directamente
         processedDataForTable = data
       }
 
@@ -56,7 +60,6 @@ export function ExportButtons({ data, filename, title, enableCredentials = false
           await exportToPDF(processedDataForTable, filename, title)
           break
         case "credentials":
-          // La exportación de credenciales solo funciona para asignaciones
           if (!isAssignmentData) {
             alert("La exportación de credenciales solo está disponible para asignaciones")
             return
@@ -67,7 +70,7 @@ export function ExportButtons({ data, filename, title, enableCredentials = false
             cedula: item.members?.cedula || "",
             role: item.role || item.member_type || "",
           }))
-          await exportCredentials(credentialsData, title)
+          await exportCredentials(credentialsData, title, processImageUrl)
           break
       }
     } catch (error) {

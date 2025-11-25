@@ -24,6 +24,7 @@ type Process = {
   start_date: string
   end_date: string
   created_at: string
+  image_url?: string
 }
 
 export function ProcessTable({ processes }: { processes: Process[] }) {
@@ -35,6 +36,20 @@ export function ProcessTable({ processes }: { processes: Process[] }) {
     if (!deleteId) return
     setIsDeleting(true)
     const supabase = createClient()
+
+    const process = processes.find((p) => p.id === deleteId)
+
+    if (process?.image_url) {
+      try {
+        const urlParts = process.image_url.split("process-images/")
+        if (urlParts.length > 1) {
+          const filePath = urlParts[1]
+          await supabase.storage.from("process-images").remove([filePath])
+        }
+      } catch (err) {
+        console.error("Error deleting image:", err)
+      }
+    }
 
     const { error } = await supabase.from("electoral_processes").delete().eq("id", deleteId)
 
@@ -72,6 +87,7 @@ export function ProcessTable({ processes }: { processes: Process[] }) {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Imagen</TableHead>
               <TableHead>Nombre</TableHead>
               <TableHead>Fecha Inicio</TableHead>
               <TableHead>Fecha Fin</TableHead>
@@ -81,6 +97,22 @@ export function ProcessTable({ processes }: { processes: Process[] }) {
           <TableBody>
             {processes.map((process) => (
               <TableRow key={process.id}>
+                <TableCell>
+                  {process.image_url ? (
+                    <div className="relative h-12 w-12 overflow-hidden rounded-md">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={process.image_url}
+                        alt={process.name}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex h-12 w-12 items-center justify-center rounded-md bg-muted text-xs text-muted-foreground">
+                      Sin imagen
+                    </div>
+                  )}
+                </TableCell>
                 <TableCell className="font-medium">{process.name}</TableCell>
                 <TableCell>{formatDate(process.start_date)}</TableCell>
                 <TableCell>{formatDate(process.end_date)}</TableCell>
@@ -107,7 +139,7 @@ export function ProcessTable({ processes }: { processes: Process[] }) {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminará el proceso electoral y todas sus asignaciones asociadas.
+              Esta acción no se puede deshacer. Se eliminará el proceso electoral, su imagen y todas sus asignaciones asociadas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

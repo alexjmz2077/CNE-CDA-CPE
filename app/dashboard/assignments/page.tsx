@@ -49,10 +49,10 @@ export default async function AssignmentsPage({
       ? (resolvedSearchParams.memberType as "CPE" | "CDA")
       : "ALL"
 
-  // Fetch processes
+  // Fetch processes - INCLUIR image_url
   const { data: processes, error: processesError } = await supabase
     .from("electoral_processes")
-    .select("id, name")
+    .select("id, name, image_url")
     .order("start_date", { ascending: false })
 
   // Fetch assignments only if a process is selected
