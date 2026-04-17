@@ -2,6 +2,8 @@ import type React from "react"
 import { NavSidebar } from "@/components/nav-sidebar"
 import { DashboardHeader } from "@/components/dashboard-header"
 
+export const dynamic = "force-dynamic"
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen">
