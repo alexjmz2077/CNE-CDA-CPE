@@ -28,3 +28,17 @@ Continue building your app on:
 2. Deploy your chats from the v0 interface
 3. Changes are automatically pushed to this repository
 4. Vercel deploys the latest version from this repository
+
+## Change Database Connection (Supabase)
+
+This app connects to Supabase using environment variables.
+
+1. Create a local env file from `.env.example`:
+	- `cp .env.example .env.local` (macOS/Linux)
+	- `Copy-Item .env.example .env.local` (PowerShell)
+2. Set your new project credentials in `.env.local`:
+	- `NEXT_PUBLIC_SUPABASE_URL`
+	- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+3. Restart your dev server.
+
+The app also supports `SUPABASE_URL` and `SUPABASE_ANON_KEY` as aliases.
