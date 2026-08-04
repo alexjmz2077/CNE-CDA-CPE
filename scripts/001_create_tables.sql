@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS assignments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   process_id UUID NOT NULL REFERENCES electoral_processes(id) ON DELETE CASCADE,
   member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
-  role TEXT CHECK (role IN ('Supervisor', 'Revisor', 'Digitador', 'Archivador')),
+  role TEXT CHECK (role IN ('Supervisor', 'Revisor', 'Digitador', 'Archivador', 'Operador de Escáner', 'Asistente de Escáner')),
   precinct TEXT,
   created_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

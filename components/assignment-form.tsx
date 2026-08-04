@@ -55,6 +55,11 @@ const CPE_ROLE_OPTIONS = [
   { value: "Administrador Técnico Provincial", label: "Administrador Técnico Provincial" },
 ]
 
+const CDA_ROLE_OPTIONS = [
+  { value: "Operador de Escáner", label: "Operador de Escáner" },
+  { value: "Asistente de Escáner", label: "Asistente de Escáner" },
+]
+
 export function AssignmentForm({ assignment, processes = [], members = [], precincts = [] }: AssignmentFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -65,7 +70,7 @@ export function AssignmentForm({ assignment, processes = [], members = [], preci
   const [formData, setFormData] = useState({
     process_id: assignment?.process_id || "",
     member_id: assignment?.member_id || "",
-    role: assignment?.role || "",
+    role: assignment?.role === "CDA" ? "Operador de Escáner" : assignment?.role || "",
     cda_precinct_id: assignment?.cda_precinct_id || "",
   })
 
@@ -73,7 +78,7 @@ export function AssignmentForm({ assignment, processes = [], members = [], preci
     setSelectedMemberType(type)
     setFormData((prev) => ({
       ...prev,
-      role: type === "CPE" ? prev.role : "",
+      role: "",
       cda_precinct_id: type === "CDA" ? prev.cda_precinct_id : "",
     }))
   }
@@ -83,8 +88,8 @@ export function AssignmentForm({ assignment, processes = [], members = [], preci
     setIsLoading(true)
     setError(null)
 
-    if (selectedMemberType === "CPE" && !formData.role) {
-      setError("Seleccione un rol válido para miembros CPE")
+    if (selectedMemberType && !formData.role) {
+      setError(`Seleccione un rol válido para miembros ${selectedMemberType}`)
       setIsLoading(false)
       return
     }
@@ -105,7 +110,7 @@ export function AssignmentForm({ assignment, processes = [], members = [], preci
         process_id: formData.process_id,
         member_id: formData.member_id,
         member_type: selectedMemberType,
-        role: selectedMemberType === "CPE" ? formData.role || null : null,
+        role: formData.role || null,
         cda_precinct_id: selectedMemberType === "CDA" ? formData.cda_precinct_id : null,
       }
 
@@ -214,7 +219,7 @@ export function AssignmentForm({ assignment, processes = [], members = [], preci
           </Select>
         </div>
 
-        {selectedMemberType === "CPE" ? (
+        {selectedMemberType ? (
           <div className="space-y-2">
             <span className="text-sm font-medium text-muted-foreground">Rol</span>
             <Select
@@ -226,7 +231,7 @@ export function AssignmentForm({ assignment, processes = [], members = [], preci
                 <SelectValue placeholder="Seleccione el rol" />
               </SelectTrigger>
               <SelectContent>
-                {CPE_ROLE_OPTIONS.map((role) => (
+                {(selectedMemberType === "CPE" ? CPE_ROLE_OPTIONS : CDA_ROLE_OPTIONS).map((role) => (
                   <SelectItem key={role.value} value={role.value}>
                     {role.label}
                   </SelectItem>

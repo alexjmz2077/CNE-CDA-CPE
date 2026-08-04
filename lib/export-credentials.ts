@@ -9,6 +9,7 @@ type CredentialData = {
 
 const roleColors: Record<string, string> = {
   "Operador de Escáner": "#00b376",
+  "Asistente de Escáner": "#018158",
   "Digitador": "#016357",
   "Supervisor": "#006cb0",
   "Revisor de Firmas": "#f04e54",
@@ -17,7 +18,7 @@ const roleColors: Record<string, string> = {
   "CDA": "#00b376",
 }
 
-const getRoleDisplay = (role: string): string => {
+const normalizeRole = (role: string): string => {
   return role === "CDA" ? "Operador de Escáner" : role
 }
 
@@ -154,8 +155,8 @@ export async function exportCredentials(
     })
 
     // Barra de color con rol
-    const roleDisplay = getRoleDisplay(member.role || "")
-    let roleColor = roleColors[member.role] || "#000000"
+    const roleDisplay = normalizeRole(member.role || "")
+    let roleColor = roleColors[roleDisplay] || roleColors[member.role] || "#000000"
     
     const barHeight = 1.6
     const barY = yOffset + credentialHeight - barHeight
