@@ -111,7 +111,7 @@ export function AssignmentForm({ assignment, processes = [], members = [], preci
         member_id: formData.member_id,
         member_type: selectedMemberType,
         role: formData.role || null,
-        cda_precinct_id: selectedMemberType === "CDA" ? formData.cda_precinct_id : null,
+        cda_precinct_id: selectedMemberType === "CDA" ? formData.cda_precinct_id || null : null,
       }
 
       const handleDatabaseError = (dbError: PostgrestError) => {
@@ -242,21 +242,24 @@ export function AssignmentForm({ assignment, processes = [], members = [], preci
         ) : null}
 
         {selectedMemberType === "CDA" ? (
-          <SearchDropdown
-            placeholder="Buscar recinto CDA"
-            searchPlaceholder="Código, nombre, cantón o parroquia…"
-            emptyText="No se encontraron recintos"
-            items={precincts.map((precinct) => ({
-              value: precinct.id,
-              label: precinct.name,
-              description: [precinct.code, precinct.canton, precinct.parroquia ?? precinct.parish]
-                .filter(Boolean)
-                .join(" · "),
-            }))}
-            value={formData.cda_precinct_id}
-            onValueChange={(value) => setFormData({ ...formData, cda_precinct_id: value })}
-            disabled={isLoading}
-          />
+          <div className="space-y-2">
+            <span className="text-sm font-medium text-muted-foreground">Recinto CDA (opcional)</span>
+            <SearchDropdown
+              placeholder="Buscar recinto CDA"
+              searchPlaceholder="Código, nombre, cantón o parroquia…"
+              emptyText="No se encontraron recintos"
+              items={precincts.map((precinct) => ({
+                value: precinct.id,
+                label: precinct.name,
+                description: [precinct.code, precinct.canton, precinct.parroquia ?? precinct.parish]
+                  .filter(Boolean)
+                  .join(" · "),
+              }))}
+              value={formData.cda_precinct_id}
+              onValueChange={(value) => setFormData({ ...formData, cda_precinct_id: value })}
+              disabled={isLoading}
+            />
+          </div>
         ) : null}
       </div>
 

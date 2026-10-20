@@ -2,7 +2,7 @@ import type React from "react"
 import { NavSidebar } from "@/components/nav-sidebar"
 import { DashboardHeader } from "@/components/dashboard-header"
 
-export const dynamic = "force-dynamic"
+"use client";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
