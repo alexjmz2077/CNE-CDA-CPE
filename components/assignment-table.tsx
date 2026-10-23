@@ -8,6 +8,7 @@ import { Pencil, Trash2, Search } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { getAssignmentRoleLabel, normalizeForSearch } from "@/lib/assignment-utils"
 import { useMemo, useState, useEffect } from "react"
 import {
   AlertDialog,
@@ -47,15 +48,7 @@ type Assignment = {
   }
 }
 
-const CPE_ROLE_LABELS: Record<string, string> = {
-  Supervisor: "Supervisor",
-  Revisor: "Revisor de Firmas",
-  Digitador: "Digitador",
-  Archivador: "Archivo de Actas",
-  Receptor: "Receptor de Actas",
-  Operador: "Operador de Escáner",
-  Administrador: "Administrador Técnico Provincial",
-}
+type SortKey = "member" | "cedula" | "phone" | "type" | "role" | "precinct"
 
 type AssignmentTableProps = {
   assignments: Assignment[]
@@ -67,11 +60,11 @@ export function AssignmentTable({ assignments, onFilteredAssignmentsChange }: As
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [sortConfig, setSortConfig] = useState<Array<{ key: "member" | "cedula" | "phone" | "type" | "role"; order: "asc" | "desc" }>>([
+  const [sortConfig, setSortConfig] = useState<Array<{ key: SortKey; order: "asc" | "desc" }>>([
     { key: "member", order: "asc" }
   ])
 
-  const handleSort = (key: "member" | "cedula" | "phone" | "type" | "role", ctrlKey: boolean = false) => {
+  const handleSort = (key: SortKey, ctrlKey: boolean = false) => {
     setSortConfig((current) => {
       const existingIndex = current.findIndex(sort => sort.key === key)
       
@@ -105,7 +98,7 @@ export function AssignmentTable({ assignments, onFilteredAssignmentsChange }: As
     return [member.second_name, member.name].filter(Boolean).join(" ")
   }
 
-  const getComparableValue = (assignment: Assignment, key: "member" | "cedula" | "phone" | "type" | "role") => {
+  const getComparableValue = (assignment: Assignment, key: SortKey) => {
     switch (key) {
       case "member":
         return getFullName(assignment.members)
@@ -116,33 +109,44 @@ export function AssignmentTable({ assignments, onFilteredAssignmentsChange }: As
       case "type":
         return assignment.member_type ?? ""
       case "role":
-        return assignment.member_type === "CPE" ? assignment.role ?? "" : assignment.cda_precincts?.name ?? ""
+        return getAssignmentRoleLabel(assignment.member_type, assignment.role)
+      case "precinct":
+        return assignment.member_type === "CDA"
+          ? [
+              assignment.cda_precincts?.name,
+              assignment.cda_precincts?.canton,
+              assignment.cda_precincts?.parish,
+            ]
+              .filter(Boolean)
+              .join(" ")
+          : ""
       default:
         return ""
     }
-  }
-
-  const getRoleLabel = (role: string | null): string => {
-    if (!role) return "Sin rol"
-    return CPE_ROLE_LABELS[role] || role
   }
 
   const filteredAndSortedAssignments = useMemo(() => {
     // Primero filtrar por búsqueda
     let filtered = assignments
     if (searchTerm) {
-      const term = searchTerm.toLowerCase()
+      const term = normalizeForSearch(searchTerm)
       filtered = assignments.filter((assignment) => {
-        const fullName = getFullName(assignment.members).toLowerCase()
-        const cedula = assignment.members?.cedula?.toLowerCase() || ""
-        const phone = assignment.members?.phone?.toLowerCase() || ""
-        const type = assignment.member_type?.toLowerCase() || ""
-        const role = assignment.member_type === "CPE" 
-          ? getRoleLabel(assignment.role).toLowerCase()
-          : assignment.cda_precincts?.name?.toLowerCase() || ""
-        const location = assignment.member_type === "CDA"
-          ? `${assignment.cda_precincts?.canton || ""} ${assignment.cda_precincts?.parish || ""}`.toLowerCase()
-          : ""
+        const fullName = normalizeForSearch(getFullName(assignment.members))
+        const cedula = normalizeForSearch(assignment.members?.cedula)
+        const phone = normalizeForSearch(assignment.members?.phone)
+        const type = normalizeForSearch(assignment.member_type)
+        const role = normalizeForSearch(getAssignmentRoleLabel(assignment.member_type, assignment.role))
+        const location = normalizeForSearch(
+          assignment.member_type === "CDA"
+            ? [
+                assignment.cda_precincts?.name,
+                assignment.cda_precincts?.canton,
+                assignment.cda_precincts?.parish,
+              ]
+                .filter(Boolean)
+                .join(" ")
+            : "",
+        )
 
         return (
           fullName.includes(term) ||
@@ -214,7 +218,7 @@ export function AssignmentTable({ assignments, onFilteredAssignmentsChange }: As
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nombre, cédula, teléfono, tipo o rol/recinto..."
+            placeholder="Buscar por nombre, cédula, teléfono, tipo, rol o recinto..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -303,12 +307,29 @@ export function AssignmentTable({ assignments, onFilteredAssignmentsChange }: As
                   onClick={(e) => handleSort("role", e.ctrlKey || e.metaKey)}
                   className="flex items-center gap-1 font-medium"
                 >
-                  Rol/Recinto
+                  Rol
                   {sortConfig.find(s => s.key === "role") && (
                     <span className="text-xs">
                       {sortConfig.find(s => s.key === "role")?.order === "asc" ? "↑" : "↓"}
                       {sortConfig.length > 1 && (
                         <sup className="ml-0.5">{sortConfig.findIndex(s => s.key === "role") + 1}</sup>
+                      )}
+                    </span>
+                  )}
+                </button>
+              </TableHead>
+              <TableHead>
+                <button
+                  type="button"
+                  onClick={(e) => handleSort("precinct", e.ctrlKey || e.metaKey)}
+                  className="flex items-center gap-1 font-medium"
+                >
+                  Recinto
+                  {sortConfig.find(s => s.key === "precinct") && (
+                    <span className="text-xs">
+                      {sortConfig.find(s => s.key === "precinct")?.order === "asc" ? "↑" : "↓"}
+                      {sortConfig.length > 1 && (
+                        <sup className="ml-0.5">{sortConfig.findIndex(s => s.key === "precinct") + 1}</sup>
                       )}
                     </span>
                   )}
@@ -320,7 +341,7 @@ export function AssignmentTable({ assignments, onFilteredAssignmentsChange }: As
           <TableBody>
             {filteredAndSortedAssignments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                   No se encontraron resultados para "{searchTerm}"
                 </TableCell>
               </TableRow>
@@ -336,9 +357,12 @@ export function AssignmentTable({ assignments, onFilteredAssignmentsChange }: As
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {assignment.member_type === "CPE" ? (
-                      <span className="text-sm">{getRoleLabel(assignment.role)}</span>
-                    ) : (
+                    <span className="text-sm">
+                      {getAssignmentRoleLabel(assignment.member_type, assignment.role)}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    {assignment.member_type === "CDA" ? (
                       <div className="text-sm">
                         <p className="font-medium">{assignment.cda_precincts?.name ?? "Sin recinto"}</p>
                         <p className="text-xs text-muted-foreground">
@@ -347,6 +371,8 @@ export function AssignmentTable({ assignments, onFilteredAssignmentsChange }: As
                             .join(" / ") || "—"}
                         </p>
                       </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
                     )}
                   </TableCell>
                   <TableCell className="text-right">

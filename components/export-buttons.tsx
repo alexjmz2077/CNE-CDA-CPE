@@ -5,6 +5,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Download, FileSpreadsheet, FileText, File, IdCard } from "lucide-react"
 import { exportToCSV, exportToExcel, exportToPDF } from "@/lib/export-utils"
 import { exportCredentials } from "@/lib/export-credentials"
+import { getAssignmentRoleLabel } from "@/lib/assignment-utils"
 import { useState } from "react"
 
 type ExportButtonsProps = {
@@ -33,16 +34,21 @@ export function ExportButtons({
       
       if (isAssignmentData) {
         processedDataForTable = data.map((item) => {
-          const rol = item.member_type === 'CDA'
-            ? `Recinto: ${item.cda_precincts?.name || 'N/A'}`
-            : item.role || 'N/A'
+          const rol = getAssignmentRoleLabel(item.member_type, item.role)
+          const recinto =
+            item.member_type === "CDA"
+              ? [item.cda_precincts?.name, item.cda_precincts?.canton, item.cda_precincts?.parish]
+                  .filter(Boolean)
+                  .join(" / ") || "N/A"
+              : "N/A"
 
           return {
             "Cédula": item.members?.cedula || "",
             "Miembro": `${item.members?.name || ""} ${item.members?.second_name || ""}`.trim(),
-            "Telefono": item.members?.phone || "N/A",
+            "Teléfono": item.members?.phone || "N/A",
             "Tipo": item.member_type,
             "Rol": rol,
+            "Recinto": recinto,
           }
         })
       } else {
@@ -68,7 +74,7 @@ export function ExportButtons({
             name: item.members?.name || "",
             secondName: item.members?.second_name || "",
             cedula: item.members?.cedula || "",
-            role: item.role || item.member_type || "",
+            role: item.role ? getAssignmentRoleLabel(item.member_type, item.role) : item.member_type || "",
           }))
           await exportCredentials(credentialsData, title, processImageUrl)
           break

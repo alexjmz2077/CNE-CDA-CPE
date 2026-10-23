@@ -1,11 +1,10 @@
-import { createClient } from "@/lib/supabase/server"
+import type { User } from "@supabase/supabase-js"
 
-export async function DashboardHeader() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+type DashboardHeaderProps = {
+  user: User | null
+}
 
+export function DashboardHeader({ user }: DashboardHeaderProps) {
   return (
     <header className="border-b bg-card">
       <div className="flex h-16 items-center justify-between px-6">

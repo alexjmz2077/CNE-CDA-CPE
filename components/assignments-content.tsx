@@ -71,30 +71,6 @@ export function AssignmentsContent({
 
   const selectedProcess = processes.find((p) => p.id === selectedProcessId)
 
-  const getFullName = (member: { name: string; second_name: string | null }) => {
-    return [member.second_name, member.name].filter(Boolean).join(" ")
-  }
-
-  const exportData = useMemo(
-    () =>
-      filteredAssignments.map((assignment) => ({
-        Miembro: getFullName(assignment.members) || "-",
-        Cédula: assignment.members?.cedula ?? "-",
-        Teléfono: assignment.members?.phone ?? "-",
-        Tipo: assignment.member_type,
-        "Rol/Recinto":
-          assignment.member_type === "CPE"
-            ? assignment.role || "-"
-            : `Recinto: ${assignment.cda_precincts?.name ?? "-"} (${[
-                assignment.cda_precincts?.canton,
-                assignment.cda_precincts?.parish,
-              ]
-                .filter(Boolean)
-                .join(" / ") || "-"})`,
-      })),
-    [filteredAssignments],
-  )
-
   const pdfTitle = selectedProcess
     ? `Lista de Asignaciones: ${selectedProcess.name}`
     : "Lista de Asignaciones"
