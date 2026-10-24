@@ -31,9 +31,7 @@ type Assignment = {
 export default async function AssignmentsPage({
   searchParams,
 }: {
-  searchParams?:
-    | Record<string, string | string[] | undefined>
-    | Promise<Record<string, string | string[] | undefined>>
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
 }) {
   const resolvedSearchParams = (await searchParams) ?? {}
   const supabase = await createClient()

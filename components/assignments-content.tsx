@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react"
 import Link from "next/link"
-import { Plus } from "lucide-react"
+import { FileText, Plus } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { ActaGenerationDialog } from "@/components/acta-generation-dialog"
 import { AssignmentFilters } from "@/components/assignment-filters"
 import { AssignmentTable } from "@/components/assignment-table"
 import { ExportButtons } from "@/components/export-buttons"
@@ -61,6 +62,7 @@ export function AssignmentsContent({
 }: AssignmentsContentProps) {
   const [memberType, setMemberType] = useState<MemberTypeFilter>(initialMemberType)
   const [filteredAssignments, setFilteredAssignments] = useState<Assignment[]>(assignments)
+  const [actasOpen, setActasOpen] = useState(false)
 
   const typeFilteredAssignments = useMemo(() => {
     if (memberType === "ALL") {
@@ -83,6 +85,21 @@ export function AssignmentsContent({
           <p className="text-muted-foreground">Gestión de asignaciones de miembros a procesos</p>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="gap-2 bg-transparent"
+            disabled={!selectedProcessId || filteredAssignments.length === 0}
+            onClick={() => setActasOpen(true)}
+            title="Generar actas de entrega-recepción con los registros filtrados"
+          >
+            <FileText className="h-4 w-4" />
+            Actas
+            {filteredAssignments.length > 0 ? (
+              <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
+                {filteredAssignments.length}
+              </span>
+            ) : null}
+          </Button>
           {selectedProcessId ? (
             <ExportButtons
               data={filteredAssignments}
@@ -128,6 +145,13 @@ export function AssignmentsContent({
           )}
         </CardContent>
       </Card>
+
+      <ActaGenerationDialog
+        open={actasOpen}
+        onOpenChange={setActasOpen}
+        assignments={filteredAssignments}
+        processName={selectedProcess?.name}
+      />
     </div>
   )
 }
