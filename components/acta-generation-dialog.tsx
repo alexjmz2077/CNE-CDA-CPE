@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type ChangeEvent } from "react"
 import {
   CalendarDays,
   FileDown,
@@ -11,6 +11,7 @@ import {
   Plus,
   Settings2,
   Trash2,
+  Upload,
   UserRound,
 } from "lucide-react"
 
@@ -68,6 +69,10 @@ const DEFAULT_INSTITUTIONAL_NAME = "Ing. Deybi Rivera"
 const DEFAULT_INSTITUTIONAL_POSITION =
   "Responsable de la Unidad Provincial de Seguridad Informática y Proyectos Tecnológicos Electorales, Encargado"
 
+const MAX_SIGNATURE_FILE_SIZE = 10 * 1024 * 1024
+const SIGNATURE_MAX_WIDTH = 1200
+const SIGNATURE_MAX_HEIGHT = 600
+
 let rowCounter = 0
 
 function createRowId() {
@@ -94,6 +99,53 @@ function getDefaultCargo(assignment: Assignment) {
     return roleLabel
   }
   return assignment.member_type === "CDA" ? "Miembro del CDA" : "Miembro del CPE"
+}
+
+async function loadSignatureImage(file: File): Promise<string> {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("La firma debe ser una imagen PNG, JPG o WEBP.")
+  }
+
+  if (file.size > MAX_SIGNATURE_FILE_SIZE) {
+    throw new Error("La imagen de la firma no debe superar los 10 MB.")
+  }
+
+  const objectUrl = URL.createObjectURL(file)
+
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const element = new Image()
+      element.onload = () => resolve(element)
+      element.onerror = () => reject(new Error("No se pudo leer la imagen de la firma."))
+      element.src = objectUrl
+    })
+
+    if (!image.naturalWidth || !image.naturalHeight) {
+      throw new Error("La imagen de la firma no es válida.")
+    }
+
+    const scale = Math.min(
+      1,
+      SIGNATURE_MAX_WIDTH / image.naturalWidth,
+      SIGNATURE_MAX_HEIGHT / image.naturalHeight,
+    )
+    const width = Math.max(1, Math.round(image.naturalWidth * scale))
+    const height = Math.max(1, Math.round(image.naturalHeight * scale))
+
+    const canvas = document.createElement("canvas")
+    canvas.width = width
+    canvas.height = height
+
+    const context = canvas.getContext("2d")
+    if (!context) {
+      throw new Error("No se pudo procesar la imagen de la firma.")
+    }
+
+    context.drawImage(image, 0, 0, width, height)
+    return canvas.toDataURL("image/png")
+  } finally {
+    URL.revokeObjectURL(objectUrl)
+  }
 }
 
 function buildRecipients(assignments: Assignment[], items: ItemDraft[]): ActaRecipient[] {
@@ -210,7 +262,10 @@ export function ActaGenerationDialog({
 }: ActaGenerationDialogProps) {
   const wasOpen = useRef(false)
   const errorRef = useRef<HTMLDivElement | null>(null)
+  const signatureInputRef = useRef<HTMLInputElement | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isProcessingSignature, setIsProcessingSignature] = useState(false)
+  const [institutionalSignature, setInstitutionalSignature] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [items, setItems] = useState<ItemDraft[]>([createItem()])
   const [form, setForm] = useState({
@@ -225,6 +280,11 @@ export function ActaGenerationDialog({
     if (open && !wasOpen.current) {
       setItems([createItem("PETO", 1, "Bueno")])
       setError(null)
+      setIsProcessingSignature(false)
+      setInstitutionalSignature(null)
+      if (signatureInputRef.current) {
+        signatureInputRef.current.value = ""
+      }
       setForm({
         city: "Macas",
         date: getTodayInputValue(),
@@ -239,6 +299,36 @@ export function ActaGenerationDialog({
 
   const updateForm = (field: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [field]: value }))
+  }
+
+  const handleSignatureChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ""
+    if (!file) return
+
+    setError(null)
+    setIsProcessingSignature(true)
+
+    try {
+      const signatureDataUrl = await loadSignatureImage(file)
+      setInstitutionalSignature(signatureDataUrl)
+    } catch (signatureError) {
+      console.error("Error al cargar la firma:", signatureError)
+      setError(
+        signatureError instanceof Error
+          ? signatureError.message
+          : "No se pudo cargar la imagen de la firma.",
+      )
+    } finally {
+      setIsProcessingSignature(false)
+    }
+  }
+
+  const removeSignature = () => {
+    setInstitutionalSignature(null)
+    if (signatureInputRef.current) {
+      signatureInputRef.current.value = ""
+    }
   }
 
   const validate = (): string | null => {
@@ -261,6 +351,8 @@ export function ActaGenerationDialog({
   }
 
   const handleGenerate = async () => {
+    if (isProcessingSignature) return
+
     const validationError = validate()
     if (validationError) {
       setError(validationError)
@@ -279,6 +371,7 @@ export function ActaGenerationDialog({
         processImageUrl,
         institutionalSignerName: form.institutionalSignerName.trim(),
         institutionalSignerPosition: form.institutionalSignerPosition.trim(),
+        institutionalSignatureImage: institutionalSignature,
         recipients: buildRecipients(assignments, items),
       })
 
@@ -412,6 +505,87 @@ export function ActaGenerationDialog({
                 }
               />
             </div>
+
+            <div className="space-y-2">
+              <Label>Firma del que entrega conforme</Label>
+              <input
+                ref={signatureInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                aria-label="Seleccionar imagen de la firma del que entrega conforme"
+                onChange={handleSignatureChange}
+              />
+
+              {institutionalSignature ? (
+                <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-20 w-44 shrink-0 items-center justify-center rounded-md border bg-white p-2">
+                      <img
+                        src={institutionalSignature}
+                        alt="Vista previa de la firma del encargado"
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-sm font-medium">Firma cargada</p>
+                      <p className="text-xs text-muted-foreground">
+                        Se colocará justo debajo de “ENTREGA CONFORME”.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => signatureInputRef.current?.click()}
+                      disabled={isProcessingSignature}
+                    >
+                      Cambiar
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={removeSignature}
+                      disabled={isProcessingSignature}
+                      aria-label="Quitar firma"
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3 rounded-lg border border-dashed p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    Suba una imagen de la firma. Se mostrará debajo de “ENTREGA CONFORME”.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => signatureInputRef.current?.click()}
+                    disabled={isProcessingSignature}
+                    className="gap-2"
+                  >
+                    {isProcessingSignature ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4" />
+                    )}
+                    {isProcessingSignature ? "Procesando..." : "Subir firma"}
+                  </Button>
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground">
+                Formatos permitidos: PNG, JPG o WEBP. La imagen se ajusta automáticamente al
+                espacio de la firma.
+              </p>
+            </div>
           </section>
 
           <section className="space-y-4 border-t pt-6">
@@ -471,7 +645,7 @@ export function ActaGenerationDialog({
             <Button
               type="button"
               onClick={handleGenerate}
-              disabled={isGenerating || totalSigners === 0}
+              disabled={isGenerating || isProcessingSignature || totalSigners === 0}
               className="gap-2"
             >
               {isGenerating ? (

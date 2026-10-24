@@ -29,6 +29,7 @@ export type ActaPdfOptions = {
   processImageUrl?: string | null
   institutionalSignerName: string
   institutionalSignerPosition: string
+  institutionalSignatureImage?: string | null
   recipients: ActaRecipient[]
 }
 
@@ -374,6 +375,36 @@ function drawSignatures(
   pdf.setTextColor(...COLOR_TEXT)
   pdf.text("ENTREGA CONFORME", leftX, labelY, { align: "center" })
   pdf.text("RECIBE CONFORME", rightX, labelY, { align: "center" })
+
+  // Firma del encargado que entrega, justo debajo de "ENTREGA CONFORME".
+  if (options.institutionalSignatureImage) {
+    try {
+      const image = pdf.getImageProperties(options.institutionalSignatureImage)
+      const aspectRatio = image.width / image.height
+      const maxWidth = 50
+      const maxHeight = 24
+      let imageWidth = maxWidth
+      let imageHeight = imageWidth / aspectRatio
+
+      if (imageHeight > maxHeight) {
+        imageHeight = maxHeight
+        imageWidth = imageHeight * aspectRatio
+      }
+
+      pdf.addImage(
+        options.institutionalSignatureImage,
+        "PNG",
+        leftX - imageWidth / 2,
+        labelY + 2,
+        imageWidth,
+        imageHeight,
+        "institutional-signature",
+        "FAST",
+      )
+    } catch {
+      // Si la imagen no se puede interpretar, el acta se genera sin ella.
+    }
+  }
 
   drawSignatureText(pdf, {
     centerX: leftX,
