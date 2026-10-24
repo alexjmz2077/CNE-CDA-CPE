@@ -151,6 +151,7 @@ export function AssignmentsContent({
         onOpenChange={setActasOpen}
         assignments={filteredAssignments}
         processName={selectedProcess?.name}
+        processImageUrl={selectedProcess?.image_url}
       />
     </div>
   )

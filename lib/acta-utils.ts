@@ -166,8 +166,36 @@ export function getActaDateParts(dateISO: string): ActaDateParts | null {
     month,
     year,
     yearInWords,
-    long: `${day} de ${month} del año ${yearInWords}`,
+    long: `${day} días del mes de ${month} del año ${yearInWords}`,
   }
+}
+
+/**
+ * Devuelve la referencia del proceso electoral con el artículo adecuado.
+ * Se usa para completar automáticamente el objeto de la entrega.
+ */
+export function buildProcessReference(processName?: string): string {
+  const name = processName?.trim()
+  if (!name) return ""
+
+  if (/^elecciones/i.test(name)) return `para las ${name}`
+  if (/^consulta/i.test(name)) return `para la ${name}`
+  if (/^(proceso|consejo|referéndum|referendum|plebiscito)/i.test(name)) {
+    return `para el ${name}`
+  }
+
+  return `para el proceso electoral ${name}`
+}
+
+/**
+ * Combina el objeto escrito por el usuario con el proceso electoral activo.
+ * El formulario solo recibe el objeto; el proceso se agrega automáticamente.
+ */
+export function buildObjectDescription(object: string, processName?: string): string {
+  const cleanObject = object.trim().replace(/\.$/, "")
+  const processReference = buildProcessReference(processName)
+
+  return processReference ? `${cleanObject} ${processReference}` : cleanObject
 }
 
 /**

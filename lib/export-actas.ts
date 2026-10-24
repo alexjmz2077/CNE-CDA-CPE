@@ -1,6 +1,10 @@
 import jsPDF from "jspdf"
 
-import { getActaDateParts, sanitizeFileName } from "@/lib/acta-utils"
+import {
+  buildObjectDescription,
+  getActaDateParts,
+  sanitizeFileName,
+} from "@/lib/acta-utils"
 
 export type ActaItem = {
   description: string
@@ -14,7 +18,6 @@ export type ActaRecipient = {
   cargo: string
   memberType: string
   role: string
-  precinct?: string | null
   items: ActaItem[]
 }
 
@@ -23,13 +26,13 @@ export type ActaPdfOptions = {
   date: string
   object: string
   processName?: string
+  processImageUrl?: string | null
   institutionalSignerName: string
   institutionalSignerPosition: string
-  institutionalSignerCedula?: string
   recipients: ActaRecipient[]
 }
 
-type LoadedLogo = {
+type LoadedImage = {
   dataUrl: string
   aspectRatio: number
 }
@@ -41,10 +44,13 @@ const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_X * 2
 const CONTENT_TOP = 52
 const CONTENT_BOTTOM = 267
 const FOOTER_LINE_Y = 278
-const SIGNATURE_BLOCK_HEIGHT = 58
+const SIGNATURE_BLOCK_HEIGHT = 78
+const TABLE_CLOSING_GAP = 14
+const CLOSING_PARAGRAPH_HEIGHT = 13
+const CLOSING_AND_SIGNATURE_HEIGHT =
+  TABLE_CLOSING_GAP + CLOSING_PARAGRAPH_HEIGHT + SIGNATURE_BLOCK_HEIGHT
 
 const COLOR_NAVY: [number, number, number] = [21, 62, 92]
-const COLOR_GOLD: [number, number, number] = [229, 181, 22]
 const COLOR_TEXT: [number, number, number] = [35, 39, 43]
 const COLOR_MUTED: [number, number, number] = [110, 118, 126]
 const COLOR_TABLE_HEAD: [number, number, number] = [235, 240, 245]
@@ -56,7 +62,7 @@ const TABLE_COLUMNS = [
   { key: "status", width: 34, align: "center" as const },
 ]
 
-async function loadImage(url: string): Promise<LoadedLogo | null> {
+async function loadImage(url: string): Promise<LoadedImage | null> {
   if (typeof window === "undefined" || typeof Image === "undefined") return null
 
   return new Promise((resolve) => {
@@ -89,18 +95,11 @@ async function loadImage(url: string): Promise<LoadedLogo | null> {
   })
 }
 
-function drawLetterhead(pdf: jsPDF, logo: LoadedLogo | null, processName?: string) {
-  // Decoración institucional en las esquinas.
-  pdf.setFillColor(...COLOR_GOLD)
-  pdf.triangle(0, 0, 32, 0, 0, 60, "F")
-  pdf.setFillColor(...COLOR_NAVY)
-  pdf.triangle(0, 0, 22, 0, 0, 42, "F")
-
-  pdf.setFillColor(...COLOR_GOLD)
-  pdf.triangle(PAGE_WIDTH, PAGE_HEIGHT, PAGE_WIDTH - 28, PAGE_HEIGHT, PAGE_WIDTH, PAGE_HEIGHT - 46, "F")
-  pdf.setFillColor(...COLOR_NAVY)
-  pdf.triangle(PAGE_WIDTH, PAGE_HEIGHT, PAGE_WIDTH - 18, PAGE_HEIGHT, PAGE_WIDTH, PAGE_HEIGHT - 30, "F")
-
+function drawLetterhead(
+  pdf: jsPDF,
+  processImage: LoadedImage | null,
+  processName?: string,
+) {
   // Encabezado izquierdo.
   pdf.setTextColor(...COLOR_NAVY)
   pdf.setFont("helvetica", "bold")
@@ -108,45 +107,50 @@ function drawLetterhead(pdf: jsPDF, logo: LoadedLogo | null, processName?: strin
   pdf.text("DELEGACIÓN PROVINCIAL ELECTORAL DE", 25, 17)
   pdf.text("MORONA SANTIAGO", 25, 20.4)
 
-  // Logotipo institucional.
-  if (logo) {
-    const logoHeight = 18
-    const logoWidth = logoHeight * logo.aspectRatio
+  // Imagen del proceso electoral en el lugar del texto del proceso.
+  if (processImage) {
+    const maxWidth = 58
+    const maxHeight = 18
+    const top = 7.5
+
+    let imageWidth = maxWidth
+    let imageHeight = imageWidth / processImage.aspectRatio
+
+    if (imageHeight > maxHeight) {
+      imageHeight = maxHeight
+      imageWidth = imageHeight * processImage.aspectRatio
+    }
+
     pdf.addImage(
-      logo.dataUrl,
+      processImage.dataUrl,
       "PNG",
-      PAGE_WIDTH / 2 - logoWidth / 2,
-      7.5,
-      logoWidth,
-      logoHeight,
+      PAGE_WIDTH - MARGIN_X - imageWidth,
+      top + (maxHeight - imageHeight) / 2,
+      imageWidth,
+      imageHeight,
     )
   } else {
+    // Respaldo cuando el proceso todavía no tiene imagen cargada.
+    const rightText = processName?.trim() || "ELECCIONES SECCIONALES Y CPCCS 2027"
     pdf.setFont("helvetica", "bold")
-    pdf.setFontSize(15)
+    pdf.setFontSize(5.8)
     pdf.setTextColor(...COLOR_NAVY)
-    pdf.text("CNE", PAGE_WIDTH / 2, 18, { align: "center" })
-  }
+    const rightLines = pdf.splitTextToSize(rightText.toUpperCase(), 55).slice(0, 3)
+    rightLines.forEach((line: string, index: number) => {
+      pdf.text(line, PAGE_WIDTH - 18, 12.5 + index * 3, { align: "right" })
+    })
 
-  // Identificación del proceso electoral.
-  const rightText = processName?.trim() || "ELECCIONES SECCIONALES Y CPCCS 2027"
-  pdf.setFont("helvetica", "bold")
-  pdf.setFontSize(5.8)
-  pdf.setTextColor(...COLOR_NAVY)
-  const rightLines = pdf.splitTextToSize(rightText.toUpperCase(), 55).slice(0, 3)
-  rightLines.forEach((line: string, index: number) => {
-    pdf.text(line, PAGE_WIDTH - 18, 12.5 + index * 3, { align: "right" })
-  })
-
-  if (/2027/.test(rightText)) {
-    pdf.setFont("helvetica", "bold")
-    pdf.setFontSize(5)
-    pdf.setTextColor(180, 140, 0)
-    pdf.text(
-      "76 años de democracia",
-      PAGE_WIDTH - 18,
-      12.5 + rightLines.length * 3 + 1.4,
-      { align: "right" },
-    )
+    if (/2027/.test(rightText)) {
+      pdf.setFont("helvetica", "bold")
+      pdf.setFontSize(5)
+      pdf.setTextColor(180, 140, 0)
+      pdf.text(
+        "76 años de democracia",
+        PAGE_WIDTH - 18,
+        12.5 + rightLines.length * 3 + 1.4,
+        { align: "right" },
+      )
+    }
   }
 
   // Línea separadora del encabezado.
@@ -192,11 +196,16 @@ function drawPageTitle(pdf: jsPDF, continuation = false) {
   pdf.line(PAGE_WIDTH / 2 - lineWidth / 2, 44.5, PAGE_WIDTH / 2 + lineWidth / 2, 44.5)
 }
 
-function startPage(pdf: jsPDF, logo: LoadedLogo | null, processName: string | undefined, continuation: boolean) {
+function startPage(
+  pdf: jsPDF,
+  processImage: LoadedImage | null,
+  processName: string | undefined,
+  continuation: boolean,
+) {
   if (continuation) {
     pdf.addPage()
   }
-  drawLetterhead(pdf, logo, processName)
+  drawLetterhead(pdf, processImage, processName)
   drawPageTitle(pdf, continuation)
   return CONTENT_TOP
 }
@@ -312,13 +321,14 @@ function drawSignatureText(
     centerX: number
     y: number
     name: string
-    cedula: string
+    cedula?: string
     cargo: string
     isInstitutional?: boolean
+    showCedula?: boolean
   },
 ) {
   const maxWidth = 68
-  const { centerX, y, name, cedula, cargo, isInstitutional } = params
+  const { centerX, y, name, cedula, cargo, isInstitutional, showCedula = true } = params
 
   pdf.setTextColor(...COLOR_TEXT)
   pdf.setFont("times", "bold")
@@ -328,15 +338,17 @@ function drawSignatureText(
     pdf.text(line, centerX, y + index * 3.5, { align: "center" })
   })
 
-  let currentY = y + nameLines.length * 3.5 + 3.4
+  let currentY = y + nameLines.length * 3.5 + 4.2
 
-  pdf.setFont("times", "normal")
-  pdf.setFontSize(7.8)
-  const cedulaText = cedula?.trim()
-    ? `C.I. ${cedula.trim()}`
-    : "C.I. ____________________________"
-  pdf.text(cedulaText, centerX, currentY, { align: "center" })
-  currentY += 4
+  if (showCedula) {
+    pdf.setFont("times", "normal")
+    pdf.setFontSize(7.8)
+    const cedulaText = cedula?.trim()
+      ? `C.I. ${cedula.trim()}`
+      : "C.I. ____________________________"
+    pdf.text(cedulaText, centerX, currentY, { align: "center" })
+    currentY += 4.4
+  }
 
   const cargoLabel = isInstitutional ? "CARGO: " : "Cargo: "
   const cargoLines = pdf.splitTextToSize(`${cargoLabel}${cargo}`, maxWidth)
@@ -354,7 +366,8 @@ function drawSignatures(
 ) {
   const leftX = 59
   const rightX = 151
-  const labelY = y + 7
+  const labelY = y + 8
+  const signatureY = labelY + 30
 
   pdf.setFont("times", "bold")
   pdf.setFontSize(9.2)
@@ -364,58 +377,48 @@ function drawSignatures(
 
   drawSignatureText(pdf, {
     centerX: leftX,
-    y: labelY + 16,
+    y: signatureY,
     name: options.institutionalSignerName,
-    cedula: options.institutionalSignerCedula ?? "",
     cargo: options.institutionalSignerPosition,
     isInstitutional: true,
+    showCedula: false,
   })
 
   drawSignatureText(pdf, {
     centerX: rightX,
-    y: labelY + 16,
+    y: signatureY,
     name: recipient.name,
     cedula: recipient.cedula,
     cargo: recipient.cargo,
   })
 }
 
-function drawPageNumbers(pdf: jsPDF) {
-  const totalPages = pdf.getNumberOfPages()
-
-  for (let page = 1; page <= totalPages; page += 1) {
-    pdf.setPage(page)
-    pdf.setFont("helvetica", "normal")
-    pdf.setFontSize(6.2)
-    pdf.setTextColor(...COLOR_MUTED)
-    pdf.text(`Página ${page} de ${totalPages}`, PAGE_WIDTH / 2, 291, {
-      align: "center",
-    })
-  }
-}
-
-function drawActa(pdf: jsPDF, logo: LoadedLogo | null, options: ActaPdfOptions, recipient: ActaRecipient) {
+function drawActa(
+  pdf: jsPDF,
+  processImage: LoadedImage | null,
+  options: ActaPdfOptions,
+  recipient: ActaRecipient,
+) {
   const dateParts = getActaDateParts(options.date)
   if (!dateParts) {
     throw new Error("La fecha seleccionada no es válida.")
   }
 
-  let y = startPage(pdf, logo, options.processName, false)
+  let y = startPage(pdf, processImage, options.processName, false)
 
-  const objectText = options.object.trim().replace(/\.$/, "")
+  const objectDescription = buildObjectDescription(options.object, options.processName)
   const institutionalName = options.institutionalSignerName.trim()
   const institutionalPosition = options.institutionalSignerPosition.trim()
   const recipientName = recipient.name.trim()
   const recipientCedula = recipient.cedula.trim()
 
-  const intro = `En las instalaciones de la Delegación Provincial Electoral de Morona Santiago, en la ciudad de ${options.city.trim()}, a los ${dateParts.long}, se realiza el Acta Entrega Recepción de ${objectText}, entre ${recipientName}${recipientCedula ? ` con C.I. ${recipientCedula}` : ""}, y el ${institutionalName}, ${institutionalPosition} de la Delegación Provincial Electoral de Morona Santiago, según el siguiente detalle:`
+  const intro = `En las instalaciones de la Delegación Provincial Electoral de Morona Santiago, en la ciudad de ${options.city.trim()}, a los ${dateParts.long}, se realiza el Acta de Entrega-Recepción de ${objectDescription}, entre ${recipientName}${recipientCedula ? ` con C.I. ${recipientCedula}` : ""}, y el ${institutionalName}, ${institutionalPosition} de la Delegación Provincial Electoral de Morona Santiago, según el siguiente detalle:`
 
   y = drawParagraph(pdf, intro, y)
   y += 5
 
   const items = recipient.items.length > 0 ? recipient.items : [{ description: "-", quantity: 1, status: "Bueno" }]
   const rowHeights = items.map((item) => getTableRowHeight(pdf, item))
-  const closingAndSignatureHeight = 17 + SIGNATURE_BLOCK_HEIGHT
 
   y = drawTableHeader(pdf, y)
 
@@ -425,32 +428,32 @@ function drawActa(pdf: jsPDF, logo: LoadedLogo | null, options: ActaPdfOptions, 
       .slice(index)
       .reduce((total, height) => total + height, 0)
     const remainingFitsOnFreshPage =
-      remainingRowsHeight + closingAndSignatureHeight <= CONTENT_BOTTOM - CONTENT_TOP
+      remainingRowsHeight + CLOSING_AND_SIGNATURE_HEIGHT <= CONTENT_BOTTOM - CONTENT_TOP
 
     const shouldBreakForSignatures =
       index > 0 &&
       remainingFitsOnFreshPage &&
-      y + remainingRowsHeight + closingAndSignatureHeight > CONTENT_BOTTOM &&
-      y >= CONTENT_BOTTOM - 72
+      y + remainingRowsHeight + CLOSING_AND_SIGNATURE_HEIGHT > CONTENT_BOTTOM &&
+      y >= CONTENT_BOTTOM - 85
 
     if (shouldBreakForSignatures || y + rowHeight > CONTENT_BOTTOM) {
-      y = startPage(pdf, logo, options.processName, true)
+      y = startPage(pdf, processImage, options.processName, true)
       y = drawTableHeader(pdf, y)
     }
     y = drawTableRow(pdf, y, index, item)
   })
 
-  y += 5
+  y += TABLE_CLOSING_GAP
 
-  if (y + 13 + SIGNATURE_BLOCK_HEIGHT > CONTENT_BOTTOM) {
-    y = startPage(pdf, logo, options.processName, true)
+  if (y + CLOSING_PARAGRAPH_HEIGHT + SIGNATURE_BLOCK_HEIGHT > CONTENT_BOTTOM) {
+    y = startPage(pdf, processImage, options.processName, true)
   }
 
   y = drawClosingParagraph(pdf, y)
-  y += 4
+  y += 8
 
   if (y + SIGNATURE_BLOCK_HEIGHT > CONTENT_BOTTOM) {
-    y = startPage(pdf, logo, options.processName, true)
+    y = startPage(pdf, processImage, options.processName, true)
   }
 
   drawSignatures(pdf, y, options, recipient)
@@ -477,16 +480,17 @@ export async function generateActasPdf(options: ActaPdfOptions): Promise<jsPDF> 
     creator: "Sistema de Gestión Electoral",
   })
 
-  const logo = await loadImage("/images/CNE_Ec.png")
+  const processImage = options.processImageUrl
+    ? await loadImage(options.processImageUrl)
+    : null
 
   options.recipients.forEach((recipient, index) => {
     if (index > 0) {
       pdf.addPage()
     }
-    drawActa(pdf, logo, options, recipient)
+    drawActa(pdf, processImage, options, recipient)
   })
 
-  drawPageNumbers(pdf)
   return pdf
 }
 
