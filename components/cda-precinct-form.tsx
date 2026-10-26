@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
+import { CheckCircle2 } from "lucide-react"
 import {
   Select,
   SelectContent,
@@ -41,10 +42,25 @@ type Props = {
   contact?: Contact | null
 }
 
+const createEmptyFormData = () => ({
+  code: "",
+  name: "",
+  canton: "Morona",
+  parish: CANTON_PARISHES.Morona[0],
+  address: "",
+  is_enabled: true,
+  rector_name: "",
+  rector_phone: "",
+  rector_email: "",
+  keys_name: "",
+  keys_phone: "",
+})
+
 export function CDAPrecinctForm({ precinct, contact }: Props) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     code: precinct?.code ?? "",
     name: precinct?.name ?? "",
@@ -67,6 +83,7 @@ export function CDAPrecinctForm({ precinct, contact }: Props) {
     event.preventDefault()
     setIsLoading(true)
     setError(null)
+    setSuccess(null)
 
     const supabase = createClient()
 
@@ -129,8 +146,14 @@ export function CDAPrecinctForm({ precinct, contact }: Props) {
         if (contactError) throw new Error(contactError.message)
       }
 
-      router.push("/dashboard/cda-precincts")
-      router.refresh()
+      if (precinct) {
+        router.push("/dashboard/cda-precincts")
+        router.refresh()
+      } else {
+        setFormData(createEmptyFormData())
+        setSuccess("CDA creado correctamente. Puede registrar otro o cancelar para volver al listado.")
+        router.refresh()
+      }
     } catch (submissionError) {
       setError(submissionError instanceof Error ? submissionError.message : "Error al guardar el CDA")
     } finally {
@@ -292,6 +315,16 @@ export function CDAPrecinctForm({ precinct, contact }: Props) {
           />
         </div>
       </div>
+
+      {success && (
+        <div
+          role="status"
+          className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800"
+        >
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{success}</span>
+        </div>
+      )}
 
       {error && <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
 

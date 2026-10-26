@@ -76,7 +76,7 @@ type ActaGenerationDialogProps = {
 
 const ITEM_STATUSES = ["Bueno", "Regular", "Malo", "Nuevo", "Usado"]
 
-const DEFAULT_INSTITUTIONAL_NAME = "Ing. Deybi Rivera"
+const DEFAULT_INSTITUTIONAL_NAME = "ING. DEYBI RIVERA"
 const DEFAULT_INSTITUTIONAL_POSITION =
   "Responsable de la Unidad Provincial de Seguridad Informática y Proyectos Tecnológicos Electorales, Encargado"
 

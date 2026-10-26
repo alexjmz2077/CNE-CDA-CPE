@@ -6,9 +6,14 @@ import { createClient } from "@/lib/supabase/client"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { LayoutDashboard, Users, Calendar, UserCheck, LogOut, Building2 } from "lucide-react"
+import { LayoutDashboard, Users, Calendar, UserCheck, LogOut, Building2, X } from "lucide-react"
 
-export function NavSidebar() {
+type NavSidebarProps = {
+  className?: string
+  onClose?: () => void
+}
+
+export function NavSidebar({ className, onClose }: NavSidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
 
@@ -48,9 +53,9 @@ export function NavSidebar() {
   ]
 
   return (
-    <div className="flex h-full w-52 flex-col border-r bg-card">
+    <div className={cn("flex h-full w-52 flex-col border-r bg-card", className)}>
       <div className="border-b p-6">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-3">
           <Image
             src="/images/CNE_Ecuador.webp"
             alt="Logo CNE"
@@ -58,16 +63,28 @@ export function NavSidebar() {
             height={40}
             className="object-contain"
           />
-
+          {onClose ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              aria-label="Cerrar menú de navegación"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          ) : null}
         </div>
         <p className="mt-2 text-sm text-muted-foreground">Sistema de Gestión de Personal</p>
       </div>
-      <nav className="flex-1 space-y-1 p-4">
+      <nav className="flex-1 space-y-1 overflow-y-auto p-4">
         {navItems.map((item) => {
           const Icon = item.icon
-          const isActive = pathname === item.href
+          const isActive =
+            pathname === item.href ||
+            (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`))
           return (
-            <Link key={item.href} href={item.href}>
+            <Link key={item.href} href={item.href} onClick={() => onClose?.()}>
               <Button
                 variant={isActive ? "secondary" : "ghost"}
                 className={cn("w-full justify-start gap-3", isActive && "bg-primary/10 text-primary")}

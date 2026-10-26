@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { CheckCircle2 } from "lucide-react"
 
 type MemberFormProps = {
   member?: {
@@ -28,6 +29,7 @@ export function MemberForm({ member }: MemberFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     cedula: member?.cedula || "",
     name: member?.name || "",
@@ -87,6 +89,7 @@ export function MemberForm({ member }: MemberFormProps) {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
+    setSuccess(null)
 
     const supabase = createClient()
     const {
@@ -133,8 +136,22 @@ export function MemberForm({ member }: MemberFormProps) {
         if (error) throw error
       }
 
-      router.push("/dashboard/members")
-      router.refresh()
+      if (member) {
+        router.push("/dashboard/members")
+        router.refresh()
+      } else {
+        setFormData({
+          cedula: "",
+          name: "",
+          second_name: "",
+          phone: "",
+          email: "",
+          address: "",
+          is_admin: false,
+        })
+        setSuccess("Miembro registrado correctamente. Puede registrar otro o cancelar para volver al listado.")
+        router.refresh()
+      }
     } catch (err) {
       console.error("Error al guardar miembro:", err)
       setError(getErrorMessage(err))
@@ -217,6 +234,15 @@ export function MemberForm({ member }: MemberFormProps) {
           rows={3}
         />
       </div>
+      {success && (
+        <div
+          role="status"
+          className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800"
+        >
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{success}</span>
+        </div>
+      )}
       {error && <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
 
       <div className="flex gap-4">

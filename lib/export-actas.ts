@@ -443,7 +443,7 @@ function drawActa(
   const recipientName = recipient.name.trim()
   const recipientCedula = recipient.cedula.trim()
 
-  const intro = `En las instalaciones de la Delegación Provincial Electoral de Morona Santiago, en la ciudad de ${options.city.trim()}, a los ${dateParts.long}, se realiza el Acta de Entrega-Recepción de ${objectDescription}, entre ${recipientName}${recipientCedula ? ` con C.I. ${recipientCedula}` : ""}, y el ${institutionalName}, ${institutionalPosition} de la Delegación Provincial Electoral de Morona Santiago, según el siguiente detalle:`
+  const intro = `En las instalaciones de la Unidad de Seguridad Informática y Proyectos Tecnológicos Electorales de la Delegación Provincial Electoral de Morona Santiago, en la ciudad de ${options.city.trim()}, a los ${dateParts.long}, se realiza el Acta de Entrega-Recepción de ${objectDescription}, entre ${recipientName}${recipientCedula ? ` con C.I. ${recipientCedula}` : ""}, y el ${institutionalName}, ${institutionalPosition} de la Delegación Provincial Electoral de Morona Santiago, según el siguiente detalle:`
 
   y = drawParagraph(pdf, intro, y)
   y += 5

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { Upload, X } from "lucide-react"
+import { CheckCircle2, Upload, X } from "lucide-react"
 
 type ProcessFormProps = {
   process?: {
@@ -24,6 +24,7 @@ export function ProcessForm({ process }: ProcessFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(process?.image_url || null)
   const [shouldDeleteImage, setShouldDeleteImage] = useState(false)
@@ -113,6 +114,7 @@ export function ProcessForm({ process }: ProcessFormProps) {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
+    setSuccess(null)
 
     const supabase = createClient()
     const {
@@ -171,8 +173,23 @@ export function ProcessForm({ process }: ProcessFormProps) {
         if (error) throw error
       }
 
-      router.push("/dashboard/processes")
-      router.refresh()
+      if (process) {
+        router.push("/dashboard/processes")
+        router.refresh()
+      } else {
+        setFormData({ name: "", start_date: "", end_date: "" })
+        setImageFile(null)
+        setImagePreview(null)
+        setShouldDeleteImage(false)
+
+        const fileInput = document.getElementById("image") as HTMLInputElement | null
+        if (fileInput) {
+          fileInput.value = ""
+        }
+
+        setSuccess("Proceso electoral creado correctamente. Puede registrar otro o cancelar para volver al listado.")
+        router.refresh()
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al guardar el proceso")
     } finally {
@@ -268,6 +285,16 @@ export function ProcessForm({ process }: ProcessFormProps) {
           />
         </div>
       </div>
+
+      {success && (
+        <div
+          role="status"
+          className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800"
+        >
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{success}</span>
+        </div>
+      )}
 
       {error && <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
 

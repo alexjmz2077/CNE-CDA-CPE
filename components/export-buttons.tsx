@@ -16,6 +16,7 @@ type ExportButtonsProps = {
   title: string
   enableCredentials?: boolean
   processImageUrl?: string | null
+  fetchData?: () => Promise<any[]>
 }
 
 export function ExportButtons({ 
@@ -23,7 +24,8 @@ export function ExportButtons({
   filename, 
   title, 
   enableCredentials = false,
-  processImageUrl 
+  processImageUrl,
+  fetchData,
 }: ExportButtonsProps) {
   const [isExporting, setIsExporting] = useState(false)
   const [credentialsOpen, setCredentialsOpen] = useState(false)
@@ -59,12 +61,13 @@ export function ExportButtons({
   const handleExport = async (format: "csv" | "xlsx" | "pdf") => {
     setIsExporting(true)
     try {
-      const isAssignmentData = data.length > 0 && data[0].members !== undefined
+      const exportSource = fetchData ? await fetchData() : data
+      const isAssignmentData = exportSource.length > 0 && exportSource[0].members !== undefined
       
       let processedDataForTable
       
       if (isAssignmentData) {
-        processedDataForTable = data.map((item) => {
+        processedDataForTable = exportSource.map((item) => {
           const rol = getAssignmentRoleLabel(item.member_type, item.role)
           const recinto =
             item.member_type === "CDA"
@@ -83,7 +86,7 @@ export function ExportButtons({
           }
         })
       } else {
-        processedDataForTable = data
+        processedDataForTable = exportSource
       }
 
       switch (format) {

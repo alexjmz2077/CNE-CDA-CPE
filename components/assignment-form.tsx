@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client"
 import { CDA_ROLE_OPTIONS, CPE_ROLE_OPTIONS } from "@/lib/assignment-roles"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { CheckCircle2 } from "lucide-react"
 import type { PostgrestError } from "@supabase/supabase-js"
 
 type Process = {
@@ -50,6 +51,7 @@ export function AssignmentForm({ assignment, processes = [], members = [], preci
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [selectedMemberType, setSelectedMemberType] = useState<"CPE" | "CDA" | null>(
     assignment?.member_type || null,
   )
@@ -73,6 +75,7 @@ export function AssignmentForm({ assignment, processes = [], members = [], preci
     e.preventDefault()
     setIsLoading(true)
     setError(null)
+    setSuccess(null)
 
     if (selectedMemberType && !formData.role) {
       setError(`Seleccione un rol válido para miembros ${selectedMemberType}`)
@@ -134,8 +137,20 @@ export function AssignmentForm({ assignment, processes = [], members = [], preci
         return
       }
 
-      router.push("/dashboard/assignments")
-      router.refresh()
+      if (assignment) {
+        router.push("/dashboard/assignments")
+        router.refresh()
+      } else {
+        setSelectedMemberType(null)
+        setFormData({
+          process_id: "",
+          member_id: "",
+          role: "",
+          cda_precinct_id: "",
+        })
+        setSuccess("Asignación creada correctamente. Puede registrar otra o cancelar para volver al listado.")
+        router.refresh()
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al guardar la asignación")
     } finally {
@@ -248,6 +263,16 @@ export function AssignmentForm({ assignment, processes = [], members = [], preci
           </div>
         ) : null}
       </div>
+
+      {success && (
+        <div
+          role="status"
+          className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800"
+        >
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{success}</span>
+        </div>
+      )}
 
       {error && <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
 
