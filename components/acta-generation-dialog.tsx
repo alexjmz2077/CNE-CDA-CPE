@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, type ChangeEvent } from "react"
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react"
 import {
   CalendarDays,
   FileDown,
@@ -13,8 +13,13 @@ import {
   Trash2,
   Upload,
   UserRound,
+  Users,
 } from "lucide-react"
 
+import {
+  AssignmentSelectionList,
+  type AssignmentSelectionItem,
+} from "@/components/assignment-selection-list"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -44,6 +49,12 @@ type Assignment = {
   id: string
   member_type: "CPE" | "CDA"
   role: string | null
+  cda_precincts?: {
+    id: string
+    name: string
+    canton: string | null
+    parish: string | null
+  } | null
   members: {
     id: string
     name: string
@@ -266,6 +277,9 @@ export function ActaGenerationDialog({
   const [isGenerating, setIsGenerating] = useState(false)
   const [isProcessingSignature, setIsProcessingSignature] = useState(false)
   const [institutionalSignature, setInstitutionalSignature] = useState<string | null>(null)
+  const [selectedAssignmentIds, setSelectedAssignmentIds] = useState<string[]>(() =>
+    assignments.map((assignment) => assignment.id),
+  )
   const [error, setError] = useState<string | null>(null)
   const [items, setItems] = useState<ItemDraft[]>([createItem()])
   const [form, setForm] = useState({
@@ -279,6 +293,7 @@ export function ActaGenerationDialog({
   useEffect(() => {
     if (open && !wasOpen.current) {
       setItems([createItem("PETO", 1, "Bueno")])
+      setSelectedAssignmentIds(assignments.map((assignment) => assignment.id))
       setError(null)
       setIsProcessingSignature(false)
       setInstitutionalSignature(null)
@@ -295,7 +310,38 @@ export function ActaGenerationDialog({
     }
 
     wasOpen.current = open
-  }, [open])
+  }, [open, assignments])
+
+  const selectionItems = useMemo<AssignmentSelectionItem[]>(
+    () =>
+      assignments.map((assignment) => {
+        const precinct =
+          assignment.member_type === "CDA"
+            ? [
+                assignment.cda_precincts?.name,
+                assignment.cda_precincts?.canton,
+                assignment.cda_precincts?.parish,
+              ]
+                .filter(Boolean)
+                .join(" / ") || null
+            : null
+
+        return {
+          id: assignment.id,
+          name: getFullName(assignment.members),
+          cedula: assignment.members.cedula,
+          memberType: assignment.member_type,
+          role: getAssignmentRoleLabel(assignment.member_type, assignment.role),
+          precinct,
+        }
+      }),
+    [assignments],
+  )
+
+  const selectedAssignments = useMemo(() => {
+    const selectedIdSet = new Set(selectedAssignmentIds)
+    return assignments.filter((assignment) => selectedIdSet.has(assignment.id))
+  }, [assignments, selectedAssignmentIds])
 
   const updateForm = (field: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [field]: value }))
@@ -338,6 +384,7 @@ export function ActaGenerationDialog({
     if (!form.institutionalSignerName.trim()) return "Ingrese el nombre del encargado institucional."
     if (!form.institutionalSignerPosition.trim()) return "Ingrese el cargo del encargado institucional."
     if (!assignments.length) return "No hay registros filtrados para generar actas."
+    if (!selectedAssignments.length) return "Seleccione al menos un acta para generar."
     if (!items.length) return "Agregue al menos un ítem de entrega."
 
     const invalidItem = items.find(
@@ -372,7 +419,7 @@ export function ActaGenerationDialog({
         institutionalSignerName: form.institutionalSignerName.trim(),
         institutionalSignerPosition: form.institutionalSignerPosition.trim(),
         institutionalSignatureImage: institutionalSignature,
-        recipients: buildRecipients(assignments, items),
+        recipients: buildRecipients(selectedAssignments, items),
       })
 
       onOpenChange(false)
@@ -390,7 +437,7 @@ export function ActaGenerationDialog({
 
   const datePreview = getActaDateParts(form.date)
   const objectDescription = buildObjectDescription(form.object, processName)
-  const totalSigners = assignments.length
+  const totalSigners = selectedAssignments.length
 
   useEffect(() => {
     if (error) {
@@ -416,15 +463,15 @@ export function ActaGenerationDialog({
           <DialogDescription>
             {assignments.length === 1 ? (
               <>
-                Se usará únicamente el <strong>1</strong> registro filtrado en la tabla.
+                Hay <strong>1</strong> registro filtrado en la tabla.
               </>
             ) : (
               <>
-                Se usarán únicamente los <strong>{assignments.length}</strong> registros filtrados
-                en la tabla.
+                Hay <strong>{assignments.length}</strong> registros filtrados en la tabla.
               </>
             )}{" "}
-            Se generará un solo PDF con un acta por página.
+            Seleccione abajo de quiénes generar el acta; por defecto están todos marcados. Se
+            generará un solo PDF con un acta por página.
           </DialogDescription>
         </DialogHeader>
 
@@ -590,6 +637,28 @@ export function ActaGenerationDialog({
 
           <section className="space-y-4 border-t pt-6">
             <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-primary" />
+              <div>
+                <h3 className="font-semibold">Actas a generar</h3>
+                <p className="text-xs text-muted-foreground">
+                  Seleccione de quiénes se generará el acta. Por defecto están seleccionados todos
+                  los registros filtrados en la tabla.
+                </p>
+              </div>
+            </div>
+
+            <AssignmentSelectionList
+              items={selectionItems}
+              selectedIds={selectedAssignmentIds}
+              onSelectedIdsChange={setSelectedAssignmentIds}
+              disabled={isGenerating}
+              emptyMessage="No hay registros filtrados para generar actas."
+              listClassName="max-h-64"
+            />
+          </section>
+
+          <section className="space-y-4 border-t pt-6">
+            <div className="flex items-center gap-2">
               <ListChecks className="h-4 w-4 text-primary" />
               <div>
                 <h3 className="font-semibold">Detalle de los ítems a entregar</h3>
@@ -631,7 +700,9 @@ export function ActaGenerationDialog({
               ? `Se generará 1 PDF con ${totalSigners} ${
                   totalSigners === 1 ? "acta" : "actas"
                 } (una por página).`
-              : "No hay actas para generar."}
+              : assignments.length > 0
+                ? "Seleccione al menos un acta para generar."
+                : "No hay registros filtrados para generar actas."}
           </p>
           <div className="flex flex-col-reverse gap-2 sm:flex-row">
             <Button
