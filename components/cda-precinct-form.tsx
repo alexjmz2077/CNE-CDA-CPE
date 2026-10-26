@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { CANTON_PARISHES } from "@/lib/cda-precincts"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,22 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-
-const CANTON_PARISHES: Record<string, string[]> = {
-  Morona: ["Macas", "9 de Octubre", "General Proaño", "San Isidro", "Sinaí", "Cuchaentza", "Río Blanco", "Zuñac"],
-  Gualaquiza: ["Gualaquiza", "Bomboiza", "El Ideal", "General Proaño", "Mercedes del Salado", "Nueva Tarqui", "San Miguel de Cuyes", "Amazanga"],
-  "Limón Indanza": ["Gral. Leonidas Plaza Gutiérrez", "Indanza", "San Antonio", "Santa Rosa de Limón", "Pan de Azúcar", "San Miguel de Conchay"],
-  Santiago: ["Santiago de Méndez", "San Luis de El Upano", "Copal", "Patuca", "Tayuza", "Chinimpi", "San Ildefonso de Limón"],
-  Sucúa: ["Sucúa", "Huambi", "Asunción", "Santa Marianita de Jesús", "Logroño Grande", "Yaupi"],
-  Palora: ["Palora", "Sangay", "Arapicos", "Cumandá", "Diez de Agosto", "Metentino", "Palmira"],
-  Huamboya: ["Huamboya", "Chiguaza", "Sucúa"],
-  "San Juan Bosco": ["San Juan Bosco", "San Carlos de Limón", "Santiago de Panaza", "San Jacinto de Wakambeis", "Pan de Azúcar"],
-  Taisha: ["Taisha", "Huasaga", "Macuma", "Tuutinentza", "Pumpuentsa"],
-  Logroño: ["Logroño", "Shimpis", "Yaupi", "San Agustín"],
-  "Pablo Sexto": ["Pablo Sexto"],
-  Tiwintza: ["Santiago", "San José de Morona", "Santiago", "Winza"],
-  "Sevilla Don Bosco": ["Sevilla Don Bosco"],
-}
 
 type Precinct = {
   id: string

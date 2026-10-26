@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AssignmentForm } from "@/components/assignment-form"
+import { BulkImportCallout } from "@/components/bulk-import/bulk-import-callout"
 
 export default async function NewAssignmentPage() {
   const supabase = await createClient()
@@ -24,6 +25,8 @@ export default async function NewAssignmentPage() {
         <h1 className="text-3xl font-bold">Nueva Asignación</h1>
         <p className="text-muted-foreground">Asignar un miembro a un proceso electoral</p>
       </div>
+
+      <BulkImportCallout moduleId="assignments" />
 
       <Card>
         <CardHeader>

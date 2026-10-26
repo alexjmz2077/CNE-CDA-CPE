@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { MemberForm } from "@/components/member-form"
+import { BulkImportCallout } from "@/components/bulk-import/bulk-import-callout"
 
 export default function NewMemberPage() {
   return (
@@ -8,6 +9,8 @@ export default function NewMemberPage() {
         <h1 className="text-3xl font-bold">Nuevo Personal</h1>
         <p className="text-muted-foreground">Registrar a nuevo personal </p>
       </div>
+
+      <BulkImportCallout moduleId="members" />
 
       <Card>
         <CardHeader>

@@ -5,6 +5,7 @@ import { Plus } from "lucide-react"
 import Link from "next/link"
 import { ProcessTable } from "@/components/process-table"
 import { ExportButtons } from "@/components/export-buttons"
+import { BulkImportButton } from "@/components/bulk-import/bulk-import-button"
 
 export default async function ProcessesPage() {
   const supabase = await createClient()
@@ -23,12 +24,13 @@ export default async function ProcessesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Procesos Electorales</h1>
           <p className="text-muted-foreground">Gestión de procesos electorales</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <BulkImportButton moduleId="processes" />
           <ExportButtons data={exportData} filename="procesos-electorales" title="Lista de Procesos Electorales" />
           <Link href="/dashboard/processes/new">
             <Button className="gap-2">

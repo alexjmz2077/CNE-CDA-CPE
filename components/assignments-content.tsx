@@ -9,6 +9,7 @@ import { ActaGenerationDialog } from "@/components/acta-generation-dialog"
 import { AssignmentFilters } from "@/components/assignment-filters"
 import { AssignmentTable } from "@/components/assignment-table"
 import { ExportButtons } from "@/components/export-buttons"
+import { BulkImportButton } from "@/components/bulk-import/bulk-import-button"
 
 type Process = {
   id: string
@@ -79,12 +80,13 @@ export function AssignmentsContent({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Asignaciones</h1>
           <p className="text-muted-foreground">Gestión de asignaciones de miembros a procesos</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <BulkImportButton moduleId="assignments" />
           <Button
             variant="outline"
             className="gap-2 bg-transparent"

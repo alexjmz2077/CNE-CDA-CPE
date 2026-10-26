@@ -3,6 +3,10 @@ import { NextResponse, type NextRequest } from "next/server"
 import { getSupabaseConfig } from "@/lib/supabase/config"
 
 export async function updateSession(request: NextRequest) {
+  if (request.nextUrl.pathname.startsWith("/bulk-import-preview")) {
+    return NextResponse.next()
+  }
+
   const { url, anonKey } = getSupabaseConfig()
 
   let supabaseResponse = NextResponse.next({

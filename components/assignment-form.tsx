@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { SearchDropdown } from "@/components/ui/search-dropdown"
 import { createClient } from "@/lib/supabase/client"
+import { CDA_ROLE_OPTIONS, CPE_ROLE_OPTIONS } from "@/lib/assignment-roles"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import type { PostgrestError } from "@supabase/supabase-js"
@@ -44,21 +45,6 @@ type AssignmentFormProps = {
   members?: Member[]
   precincts?: Precinct[]
 }
-
-const CPE_ROLE_OPTIONS = [
-  { value: "Supervisor", label: "Supervisor" },
-  { value: "Revisor de Firmas", label: "Revisor de Firmas" },
-  { value: "Digitador", label: "Digitador" },
-  { value: "Archivador de Actas", label: "Archivador de Actas" },
-  { value: "Receptor de Actas", label: "Receptor de Actas" },
-  { value: "Operador de Escáner", label: "Operador de Escáner" },
-  { value: "Administrador Técnico Provincial", label: "Administrador Técnico Provincial" },
-]
-
-const CDA_ROLE_OPTIONS = [
-  { value: "Operador de Escáner", label: "Operador de Escáner" },
-  { value: "Asistente de Escáner", label: "Asistente de Escáner" },
-]
 
 export function AssignmentForm({ assignment, processes = [], members = [], precincts = [] }: AssignmentFormProps) {
   const router = useRouter()

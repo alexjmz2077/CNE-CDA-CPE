@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CDAPrecinctForm } from "@/components/cda-precinct-form"
+import { BulkImportCallout } from "@/components/bulk-import/bulk-import-callout"
 
 export default function NewCDAPrecinctPage() {
   return (
@@ -8,6 +9,8 @@ export default function NewCDAPrecinctPage() {
         <h1 className="text-3xl font-bold">Nuevo CDA</h1>
         <p className="text-muted-foreground">Registre un nuevo recinto CDA y su información de contacto</p>
       </div>
+
+      <BulkImportCallout moduleId="cda-precincts" />
 
       <Card>
         <CardHeader>

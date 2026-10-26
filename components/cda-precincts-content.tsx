@@ -6,6 +6,7 @@ import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ExportButtons } from "@/components/export-buttons"
+import { BulkImportButton } from "@/components/bulk-import/bulk-import-button"
 import { CDAPrecinctTable, PrecinctRow } from "@/components/cda-precinct-table"
 import { CDAPrecinctFilters } from "@/components/cda-precinct-filters"
 
@@ -48,12 +49,13 @@ export function CDAPrecinctsContent({ precincts, error }: CDAPrecinctsContentPro
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Recintos CDA</h1>
           <p className="text-muted-foreground">Gestione los centros de digitación avanzada</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <BulkImportButton moduleId="cda-precincts" />
           <ExportButtons data={exportData} filename="recintos-cda" title="Recintos CDA" />
           <Link href="/dashboard/cda-precincts/new">
             <Button className="gap-2">

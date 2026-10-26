@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ProcessForm } from "@/components/process-form"
+import { BulkImportCallout } from "@/components/bulk-import/bulk-import-callout"
 
 export default function NewProcessPage() {
   return (
@@ -8,6 +9,8 @@ export default function NewProcessPage() {
         <h1 className="text-3xl font-bold">Nuevo Proceso Electoral</h1>
         <p className="text-muted-foreground">Registrar un nuevo proceso electoral</p>
       </div>
+
+      <BulkImportCallout moduleId="processes" />
 
       <Card>
         <CardHeader>

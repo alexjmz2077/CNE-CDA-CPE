@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { Plus } from "lucide-react";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MemberTable } from "@/components/member-table";
 import { ExportButtons } from "@/components/export-buttons";
+import { BulkImportButton } from "@/components/bulk-import/bulk-import-button";
 
 type Member = {
   id: string;
@@ -25,23 +26,25 @@ export default function MembersPage() {
   const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchMembers = async () => {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("members")
-        .select("id, cedula, name, second_name, phone, email, address, created_at")
-        .order("created_at", { ascending: false });
+  const loadMembers = useCallback(async (showLoading = true) => {
+    if (showLoading) setIsLoading(true);
 
-      if (!error && data) {
-        setMembers(data);
-        setFilteredMembers(data);
-      }
-      setIsLoading(false);
-    };
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("members")
+      .select("id, cedula, name, second_name, phone, email, address, created_at")
+      .order("created_at", { ascending: false });
 
-    fetchMembers();
+    if (!error && data) {
+      setMembers(data);
+      setFilteredMembers(data);
+    }
+    setIsLoading(false);
   }, []);
+
+  useEffect(() => {
+    void loadMembers();
+  }, [loadMembers]);
 
   const exportData = filteredMembers.map((member) => ({
     Cédula: member.cedula,
@@ -53,12 +56,16 @@ export default function MembersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Personal</h1>
           <p className="text-muted-foreground">Gestión de miembros del equipo electoral</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <BulkImportButton
+            moduleId="members"
+            onImported={() => void loadMembers(false)}
+          />
           <ExportButtons data={exportData} filename="personal" title="Lista de Personal" />
           <Link href="/dashboard/members/new">
             <Button className="gap-2">
