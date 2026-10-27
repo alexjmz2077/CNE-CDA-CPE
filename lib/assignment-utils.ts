@@ -9,6 +9,8 @@ const CPE_ROLE_LABELS: Record<string, string> = {
   "Receptor de Actas": "Receptor de Actas",
   Operador: "Operador de Escáner",
   "Operador de Escáner": "Operador de Escáner",
+  Asistente: "Asistente de Escáner",
+  "Asistente de Escáner": "Asistente de Escáner",
   Administrador: "Administrador Técnico Provincial",
   "Administrador Técnico Provincial": "Administrador Técnico Provincial",
 }
@@ -22,7 +24,8 @@ const CDA_ROLE_LABELS: Record<string, string> = {
 
 /**
  * Devuelve la etiqueta visible del rol de una asignación según el tipo de miembro.
- * Para CDA solo existen "Operador de Escáner" y "Asistente de Escáner".
+ * Tanto CPE como CDA incluyen "Operador de Escáner" y "Asistente de Escáner";
+ * CPE además maneja roles administrativos y de archivo.
  */
 export function getAssignmentRoleLabel(
   memberType: "CPE" | "CDA" | string | null | undefined,

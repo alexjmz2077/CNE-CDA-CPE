@@ -14,6 +14,7 @@ export const CPE_ROLE_OPTIONS: AssignmentRoleOption[] = [
   { value: "Archivador de Actas", label: "Archivador de Actas" },
   { value: "Receptor de Actas", label: "Receptor de Actas" },
   { value: "Operador de Escáner", label: "Operador de Escáner" },
+  { value: "Asistente de Escáner", label: "Asistente de Escáner" },
   {
     value: "Administrador Técnico Provincial",
     label: "Administrador Técnico Provincial",
