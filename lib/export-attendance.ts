@@ -22,9 +22,9 @@ const PAGE_HEIGHT = 210
 const MARGIN_X = 8
 const MARGIN_BOTTOM = 8
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_X * 2
-const TABLE_TOP = 31
-const GROUP_HEADER_HEIGHT = 8
-const SUBHEADER_HEIGHT = 13
+const TABLE_TOP = 26
+const GROUP_HEADER_HEIGHT = 6
+const SUBHEADER_HEIGHT = 10
 const HEADER_HEIGHT = GROUP_HEADER_HEIGHT + SUBHEADER_HEIGHT
 const TABLE_BOTTOM = PAGE_HEIGHT - MARGIN_BOTTOM
 const AVAILABLE_BODY_HEIGHT = TABLE_BOTTOM - TABLE_TOP - HEADER_HEIGHT
@@ -159,11 +159,7 @@ function drawPageHeading(
   if (showDate) {
     pdf.setFont("helvetica", "bold")
     pdf.setFontSize(9)
-    pdf.text(`DÍA: ${dateLabel}`, MARGIN_X + 1, 24.5)
-
-    pdf.setDrawColor(0, 0, 0)
-    pdf.setLineWidth(0.3)
-    pdf.line(MARGIN_X, 26.5, MARGIN_X + 72, 26.5)
+    pdf.text(`DÍA: ${dateLabel}`, MARGIN_X + 1, 23.5)
   }
 }
 
@@ -230,12 +226,12 @@ function drawTableHeader(pdf: jsPDF) {
     ["FIRMA DE", "SALIDA"],
   ]
 
-  pdf.setFontSize(7.2)
+  pdf.setFontSize(7)
   subheaderLabels.forEach((lines, index) => {
     const centerX =
       morningX + index * ATTENDANCE_COLUMN_WIDTH + ATTENDANCE_COLUMN_WIDTH / 2
-    pdf.text(lines[0], centerX, subTop + 4.8, { align: "center" })
-    pdf.text(lines[1], centerX, subTop + 9.2, { align: "center" })
+    pdf.text(lines[0], centerX, subTop + 3.8, { align: "center" })
+    pdf.text(lines[1], centerX, subTop + 7.6, { align: "center" })
   })
 }
 

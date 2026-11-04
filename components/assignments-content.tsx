@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button"
 import { ActaGenerationDialog } from "@/components/acta-generation-dialog"
 import { AssignmentFilters } from "@/components/assignment-filters"
 import { AssignmentTable } from "@/components/assignment-table"
+import { AttendanceGenerationDialog } from "@/components/attendance-generation-dialog"
 import { ExportButtons } from "@/components/export-buttons"
 import { BulkImportButton } from "@/components/bulk-import/bulk-import-button"
-import { exportAttendancePDF } from "@/lib/export-attendance"
 
 type Process = {
   id: string
@@ -65,7 +65,7 @@ export function AssignmentsContent({
   const [memberType, setMemberType] = useState<MemberTypeFilter>(initialMemberType)
   const [filteredAssignments, setFilteredAssignments] = useState<Assignment[]>(assignments)
   const [actasOpen, setActasOpen] = useState(false)
-  const [isAttendanceExporting, setIsAttendanceExporting] = useState(false)
+  const [attendanceOpen, setAttendanceOpen] = useState(false)
 
   const typeFilteredAssignments = useMemo(() => {
     if (memberType === "ALL") {
@@ -80,34 +80,6 @@ export function AssignmentsContent({
   )
 
   const selectedProcess = processes.find((p) => p.id === selectedProcessId)
-
-  const handleAttendanceExport = async () => {
-    if (memberType !== "CPE" && memberType !== "CDA") return
-    if (attendanceAssignments.length === 0) return
-
-    setIsAttendanceExporting(true)
-    try {
-      await exportAttendancePDF({
-        memberType,
-        members: attendanceAssignments.map((assignment) => ({
-          name: [assignment.members.second_name, assignment.members.name]
-            .filter(Boolean)
-            .join(" "),
-        })),
-        processName: selectedProcess?.name,
-        processImageUrl: selectedProcess?.image_url,
-      })
-    } catch (error) {
-      console.error("Error al generar el registro de asistencia:", error)
-      alert(
-        error instanceof Error
-          ? error.message
-          : "Error al generar el registro de asistencia",
-      )
-    } finally {
-      setIsAttendanceExporting(false)
-    }
-  }
 
   const pdfTitle = selectedProcess
     ? `Lista de Asignaciones: ${selectedProcess.name}`
@@ -143,10 +115,9 @@ export function AssignmentsContent({
             disabled={
               memberType === "ALL" ||
               !selectedProcessId ||
-              attendanceAssignments.length === 0 ||
-              isAttendanceExporting
+              attendanceAssignments.length === 0
             }
-            onClick={handleAttendanceExport}
+            onClick={() => setAttendanceOpen(true)}
             title={
               memberType === "ALL"
                 ? "Seleccione CPE o CDA en el filtro Tipo para generar la asistencia"
@@ -154,7 +125,7 @@ export function AssignmentsContent({
             }
           >
             <ClipboardCheck className="h-4 w-4" />
-            {isAttendanceExporting ? "Generando..." : "Asistencia"}
+            Asistencia
             {memberType !== "ALL" && attendanceAssignments.length > 0 ? (
               <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
                 {attendanceAssignments.length}
@@ -214,6 +185,17 @@ export function AssignmentsContent({
         processName={selectedProcess?.name}
         processImageUrl={selectedProcess?.image_url}
       />
+
+      {memberType !== "ALL" ? (
+        <AttendanceGenerationDialog
+          open={attendanceOpen}
+          onOpenChange={setAttendanceOpen}
+          assignments={attendanceAssignments}
+          memberType={memberType}
+          processName={selectedProcess?.name}
+          processImageUrl={selectedProcess?.image_url}
+        />
+      ) : null}
     </div>
   )
 }
