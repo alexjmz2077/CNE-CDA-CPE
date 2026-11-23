@@ -20,11 +20,12 @@ type LoadedImage = {
   aspectRatio: number
 }
 
-const PAGE_WIDTH = 210
-const PAGE_HEIGHT = 297
+const PAGE_WIDTH = 297
+const PAGE_HEIGHT = 210
+const SLOT_WIDTH = PAGE_WIDTH / 2
 const SLOT_HEIGHT = PAGE_HEIGHT / 2
-const CONTENT_X = 16
-const CONTENT_WIDTH = PAGE_WIDTH - CONTENT_X * 2
+const CONTENT_MARGIN = 10
+const SLOT_CONTENT_WIDTH = SLOT_WIDTH - CONTENT_MARGIN * 2
 const DEFAULT_IMAGE_URL = "/images/CNE_Ec.png"
 
 const COLOR_NAVY: [number, number, number] = [21, 62, 92]
@@ -75,11 +76,12 @@ async function loadProcessImage(url?: string | null): Promise<LoadedImage | null
   return loadImage(DEFAULT_IMAGE_URL)
 }
 
-function drawCutLine(pdf: jsPDF, y: number) {
+function drawCutLines(pdf: jsPDF) {
   pdf.setDrawColor(180, 186, 194)
   pdf.setLineWidth(0.2)
   pdf.setLineDashPattern([2.5, 2.5], 0)
-  pdf.line(6, y, PAGE_WIDTH - 6, y)
+  pdf.line(SLOT_WIDTH, 5, SLOT_WIDTH, PAGE_HEIGHT - 5)
+  pdf.line(5, SLOT_HEIGHT, PAGE_WIDTH - 5, SLOT_HEIGHT)
   pdf.setLineDashPattern([], 0)
 }
 
@@ -87,48 +89,70 @@ function drawField(
   pdf: jsPDF,
   label: string,
   value: string | null | undefined,
+  centerX: number,
   top: number,
-  options?: { fontSize?: number; valueOffset?: number; maxLines?: number },
+  options?: {
+    fontSize?: number
+    valueOffset?: number
+    maxLines?: number
+    uppercase?: boolean
+  },
 ) {
-  const fontSize = options?.fontSize ?? 15
-  const valueOffset = options?.valueOffset ?? 9
+  const fontSize = options?.fontSize ?? 17
+  const valueOffset = options?.valueOffset ?? 10
   const maxLines = options?.maxLines ?? 2
+  const maxWidth = SLOT_CONTENT_WIDTH - 4
 
   pdf.setFont("helvetica", "bold")
   pdf.setFontSize(8)
   pdf.setTextColor(...COLOR_MUTED)
   pdf.setCharSpace(0.6)
-  pdf.text(label.toUpperCase(), CONTENT_X, top)
+  pdf.text(label.toUpperCase(), centerX, top, { align: "center" })
   pdf.setCharSpace(0)
 
   pdf.setFont("helvetica", "bold")
-  pdf.setFontSize(fontSize)
   pdf.setTextColor(...COLOR_TEXT)
 
-  const lines = pdf.splitTextToSize((value || "—").trim(), CONTENT_WIDTH - 2)
+  const rawValue = (value || "—").trim()
+  const text = options?.uppercase ? rawValue.toUpperCase() : rawValue
+
+  let currentFontSize = fontSize
+  pdf.setFontSize(currentFontSize)
+  let lines = pdf.splitTextToSize(text, maxWidth)
+
+  if (lines.length > maxLines) {
+    currentFontSize = Math.max(fontSize - 3, 10)
+    pdf.setFontSize(currentFontSize)
+    lines = pdf.splitTextToSize(text, maxWidth)
+  }
+
   lines.slice(0, maxLines).forEach((line: string, index: number) => {
-    pdf.text(line, CONTENT_X, top + valueOffset + index * (fontSize * 0.42))
+    pdf.text(line, centerX, top + valueOffset + index * (currentFontSize * 0.42), {
+      align: "center",
+    })
   })
 }
 
 function drawLabel(
   pdf: jsPDF,
   item: KitLabelItem,
-  slotIndex: number,
+  column: number,
+  row: number,
   processImage: LoadedImage | null,
 ) {
-  const slotY = slotIndex * SLOT_HEIGHT
+  const slotX = column * SLOT_WIDTH
+  const slotY = row * SLOT_HEIGHT
+  const centerX = slotX + SLOT_WIDTH / 2
 
   // Marco de la etiqueta.
   pdf.setDrawColor(190, 196, 204)
   pdf.setLineWidth(0.3)
-  pdf.roundedRect(8, slotY + 8, PAGE_WIDTH - 16, SLOT_HEIGHT - 16, 2.5, 2.5, "S")
+  pdf.roundedRect(slotX + 4, slotY + 4, SLOT_WIDTH - 8, SLOT_HEIGHT - 8, 2.5, 2.5, "S")
 
   // Logo del proceso electoral, esquina superior derecha.
-  let titleWidth = CONTENT_WIDTH
   if (processImage) {
-    const maxWidth = 52
-    const maxHeight = 20
+    const maxWidth = 38
+    const maxHeight = 14
     let imageWidth = maxWidth
     let imageHeight = imageWidth / processImage.aspectRatio
 
@@ -137,56 +161,47 @@ function drawLabel(
       imageWidth = imageHeight * processImage.aspectRatio
     }
 
-    pdf.addImage(
-      processImage.dataUrl,
-      "PNG",
-      PAGE_WIDTH - CONTENT_X - imageWidth,
-      slotY + 17,
-      imageWidth,
-      imageHeight,
-    )
-
-    titleWidth = CONTENT_WIDTH - imageWidth - 8
+    const imageX = slotX + SLOT_WIDTH - CONTENT_MARGIN - imageWidth
+    pdf.addImage(processImage.dataUrl, "PNG", imageX, slotY + 8, imageWidth, imageHeight)
   }
 
   // Título institucional.
   pdf.setFont("helvetica", "bold")
-  pdf.setFontSize(13.5)
+  pdf.setFontSize(11)
   pdf.setTextColor(...COLOR_NAVY)
-  const titleLines = pdf.splitTextToSize(
-    "Consejo Nacional Electoral Delegación Morona Santiago",
-    titleWidth,
-  )
-  titleLines.slice(0, 3).forEach((line: string, index: number) => {
-    pdf.text(line, CONTENT_X, slotY + 25 + index * 7)
+  const titleLines = ["Consejo Nacional Electoral", "Delegación Morona Santiago"]
+  titleLines.forEach((line: string, index: number) => {
+    pdf.text(line, slotX + CONTENT_MARGIN, slotY + 14 + index * 5.6)
   })
 
   // Separador del encabezado.
-  const separatorY = slotY + 46
+  const separatorY = slotY + 28
   pdf.setDrawColor(...COLOR_NAVY)
-  pdf.setLineWidth(0.6)
-  pdf.line(CONTENT_X, separatorY, PAGE_WIDTH - CONTENT_X, separatorY)
+  pdf.setLineWidth(0.5)
+  pdf.line(slotX + CONTENT_MARGIN, separatorY, slotX + SLOT_WIDTH - CONTENT_MARGIN, separatorY)
 
-  // Datos del recinto.
-  drawField(pdf, "Cantón", item.canton, slotY + 61, {
-    fontSize: 16,
+  // Datos del recinto, centrados en la etiqueta.
+  drawField(pdf, "Cantón", item.canton, centerX, slotY + 35, {
+    fontSize: 17,
     valueOffset: 9.5,
-    maxLines: 1,
+    maxLines: 2,
+    uppercase: true,
   })
-  drawField(pdf, "Parroquia", item.parish, slotY + 82, {
-    fontSize: 16,
+  drawField(pdf, "Parroquia", item.parish, centerX, slotY + 57, {
+    fontSize: 17,
     valueOffset: 9.5,
-    maxLines: 1,
+    maxLines: 2,
+    uppercase: true,
   })
-  drawField(pdf, "Nombre del recinto", item.name, slotY + 104, {
-    fontSize: 19,
-    valueOffset: 11,
+  drawField(pdf, "Nombre del recinto", item.name, centerX, slotY + 79, {
+    fontSize: 20,
+    valueOffset: 10.5,
     maxLines: 2,
   })
 }
 
 /**
- * Construye el PDF de etiquetas de kits con dos recintos por hoja.
+ * Construye el PDF de etiquetas de kits con cuatro recintos por hoja horizontal.
  * Se expone por separado para poder reutilizarlo sin iniciar una descarga.
  */
 export async function generateKitLabelsPdf(options: KitLabelsPdfOptions): Promise<jsPDF> {
@@ -195,7 +210,7 @@ export async function generateKitLabelsPdf(options: KitLabelsPdfOptions): Promis
   }
 
   const pdf = new jsPDF({
-    orientation: "portrait",
+    orientation: "landscape",
     unit: "mm",
     format: "a4",
   })
@@ -209,17 +224,20 @@ export async function generateKitLabelsPdf(options: KitLabelsPdfOptions): Promis
   const processImage = await loadProcessImage(options.processImageUrl)
 
   options.items.forEach((item, index) => {
-    const positionInPage = index % 2
+    const positionInPage = index % 4
 
     if (index > 0 && positionInPage === 0) {
       pdf.addPage()
     }
 
-    drawLabel(pdf, item, positionInPage, processImage)
+    const column = positionInPage % 2
+    const row = Math.floor(positionInPage / 2)
 
-    // Línea de corte entre las dos etiquetas de la hoja.
+    drawLabel(pdf, item, column, row, processImage)
+
+    // Líneas de corte entre las cuatro etiquetas de la hoja.
     if (positionInPage === 0) {
-      drawCutLine(pdf, SLOT_HEIGHT)
+      drawCutLines(pdf)
     }
   })
 

@@ -204,7 +204,7 @@ export function KitLabelsExportDialog({
             {selectedCount > 0
               ? `Se generará 1 PDF con ${selectedCount} ${
                   selectedCount === 1 ? "etiqueta" : "etiquetas"
-                } (2 por hoja).`
+                } (4 por hoja).`
               : "Seleccione al menos un recinto."}
           </p>
           <div className="flex flex-col-reverse gap-2 sm:flex-row">
