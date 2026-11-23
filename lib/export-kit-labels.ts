@@ -96,6 +96,7 @@ function drawField(
     valueOffset?: number
     maxLines?: number
     uppercase?: boolean
+    fitOneLine?: boolean
   },
 ) {
   const fontSize = options?.fontSize ?? 17
@@ -120,7 +121,14 @@ function drawField(
   pdf.setFontSize(currentFontSize)
   let lines = pdf.splitTextToSize(text, maxWidth)
 
-  if (lines.length > maxLines) {
+  if (options?.fitOneLine) {
+    // Los textos largos se reducen levemente para evitar que se encimen con la sección siguiente.
+    while (lines.length > 1 && currentFontSize > 12) {
+      currentFontSize -= 0.5
+      pdf.setFontSize(currentFontSize)
+      lines = pdf.splitTextToSize(text, maxWidth)
+    }
+  } else if (lines.length > maxLines) {
     currentFontSize = Math.max(fontSize - 3, 10)
     pdf.setFontSize(currentFontSize)
     lines = pdf.splitTextToSize(text, maxWidth)
@@ -151,8 +159,8 @@ function drawLabel(
 
   // Logo del proceso electoral, esquina superior derecha.
   if (processImage) {
-    const maxWidth = 38
-    const maxHeight = 14
+    const maxWidth = 64
+    const maxHeight = 26
     let imageWidth = maxWidth
     let imageHeight = imageWidth / processImage.aspectRatio
 
@@ -162,7 +170,8 @@ function drawLabel(
     }
 
     const imageX = slotX + SLOT_WIDTH - CONTENT_MARGIN - imageWidth
-    pdf.addImage(processImage.dataUrl, "PNG", imageX, slotY + 8, imageWidth, imageHeight)
+    const imageY = slotY + 6 + (maxHeight - imageHeight) / 2
+    pdf.addImage(processImage.dataUrl, "PNG", imageX, imageY, imageWidth, imageHeight)
   }
 
   // Título institucional.
@@ -171,29 +180,31 @@ function drawLabel(
   pdf.setTextColor(...COLOR_NAVY)
   const titleLines = ["Consejo Nacional Electoral", "Delegación Morona Santiago"]
   titleLines.forEach((line: string, index: number) => {
-    pdf.text(line, slotX + CONTENT_MARGIN, slotY + 14 + index * 5.6)
+    pdf.text(line, slotX + CONTENT_MARGIN, slotY + 15 + index * 5.6)
   })
 
   // Separador del encabezado.
-  const separatorY = slotY + 28
+  const separatorY = slotY + 35
   pdf.setDrawColor(...COLOR_NAVY)
   pdf.setLineWidth(0.5)
   pdf.line(slotX + CONTENT_MARGIN, separatorY, slotX + SLOT_WIDTH - CONTENT_MARGIN, separatorY)
 
   // Datos del recinto, centrados en la etiqueta.
-  drawField(pdf, "Cantón", item.canton, centerX, slotY + 35, {
+  drawField(pdf, "Cantón", item.canton, centerX, slotY + 40, {
     fontSize: 17,
-    valueOffset: 9.5,
-    maxLines: 2,
+    valueOffset: 10.5,
+    maxLines: 1,
     uppercase: true,
+    fitOneLine: true,
   })
-  drawField(pdf, "Parroquia", item.parish, centerX, slotY + 57, {
+  drawField(pdf, "Parroquia", item.parish, centerX, slotY + 59, {
     fontSize: 17,
-    valueOffset: 9.5,
-    maxLines: 2,
+    valueOffset: 10.5,
+    maxLines: 1,
     uppercase: true,
+    fitOneLine: true,
   })
-  drawField(pdf, "Nombre del recinto", item.name, centerX, slotY + 79, {
+  drawField(pdf, "Nombre del recinto", item.name, centerX, slotY + 78, {
     fontSize: 20,
     valueOffset: 10.5,
     maxLines: 2,
