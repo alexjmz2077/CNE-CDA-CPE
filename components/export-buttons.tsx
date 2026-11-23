@@ -2,11 +2,13 @@
 
 import { type AssignmentSelectionItem } from "@/components/assignment-selection-list"
 import { CredentialsExportDialog } from "@/components/credentials-export-dialog"
+import { KitLabelsExportDialog, type KitLabelProcess } from "@/components/kit-labels-export-dialog"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Download, FileSpreadsheet, FileText, File, IdCard } from "lucide-react"
+import { Download, FileSpreadsheet, FileText, File, IdCard, Tags } from "lucide-react"
 import { exportToCSV, exportToExcel, exportToPDF } from "@/lib/export-utils"
 import { exportCredentials } from "@/lib/export-credentials"
+import { exportKitLabelsPDF, type KitLabelItem } from "@/lib/export-kit-labels"
 import { getAssignmentRoleLabel } from "@/lib/assignment-utils"
 import { useMemo, useState } from "react"
 
@@ -16,6 +18,9 @@ type ExportButtonsProps = {
   title: string
   enableCredentials?: boolean
   processImageUrl?: string | null
+  enableKitLabels?: boolean
+  kitLabelItems?: KitLabelItem[]
+  processes?: KitLabelProcess[]
   fetchData?: () => Promise<any[]>
 }
 
@@ -25,10 +30,14 @@ export function ExportButtons({
   title, 
   enableCredentials = false,
   processImageUrl,
+  enableKitLabels = false,
+  kitLabelItems = [],
+  processes = [],
   fetchData,
 }: ExportButtonsProps) {
   const [isExporting, setIsExporting] = useState(false)
   const [credentialsOpen, setCredentialsOpen] = useState(false)
+  const [kitLabelsOpen, setKitLabelsOpen] = useState(false)
 
   const assignmentSelectionItems = useMemo<AssignmentSelectionItem[]>(
     () =>
@@ -137,6 +146,29 @@ export function ExportButtons({
     }
   }
 
+  const handleKitLabelsExport = async (selectedIds: string[], processId: string) => {
+    if (!selectedIds.length || !processId) return
+
+    setIsExporting(true)
+    try {
+      const selectedIdSet = new Set(selectedIds)
+      const selectedItems = kitLabelItems.filter((item) => selectedIdSet.has(item.id))
+      const selectedProcess = processes.find((process) => process.id === processId)
+
+      await exportKitLabelsPDF({
+        items: selectedItems,
+        processName: selectedProcess?.name,
+        processImageUrl: selectedProcess?.image_url,
+      })
+      setKitLabelsOpen(false)
+    } catch (error) {
+      console.error("Error exporting kit labels:", error)
+      alert("Error al generar las etiquetas")
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   return (
     <>
       <DropdownMenu>
@@ -147,6 +179,12 @@ export function ExportButtons({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          {enableKitLabels && (
+            <DropdownMenuItem onClick={() => setKitLabelsOpen(true)}>
+              <Tags className="mr-2 h-4 w-4" />
+              Etiquetas Kits
+            </DropdownMenuItem>
+          )}
           {enableCredentials && (
             <DropdownMenuItem onClick={() => setCredentialsOpen(true)}>
               <IdCard className="mr-2 h-4 w-4" />
@@ -175,6 +213,17 @@ export function ExportButtons({
           items={assignmentSelectionItems}
           isExporting={isExporting}
           onExport={handleCredentialsExport}
+        />
+      ) : null}
+
+      {enableKitLabels ? (
+        <KitLabelsExportDialog
+          open={kitLabelsOpen}
+          onOpenChange={setKitLabelsOpen}
+          items={kitLabelItems}
+          processes={processes}
+          isExporting={isExporting}
+          onExport={handleKitLabelsExport}
         />
       ) : null}
     </>

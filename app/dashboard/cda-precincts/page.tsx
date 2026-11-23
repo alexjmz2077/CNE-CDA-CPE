@@ -27,6 +27,18 @@ export default async function CDAPrecinctsPage() {
     )
     .order("name")
 
+  const { data: processesData } = await supabase
+    .from("electoral_processes")
+    .select("id, name, image_url")
+    .order("start_date", { ascending: false })
+
+  const processes =
+    processesData?.map((process) => ({
+      id: process.id,
+      name: process.name,
+      image_url: process.image_url,
+    })) ?? []
+
   const precincts: PrecinctRow[] =
     data?.map((item) => ({
       id: item.id,
@@ -47,5 +59,5 @@ export default async function CDAPrecinctsPage() {
         : null,
     })) ?? []
 
-  return <CDAPrecinctsContent precincts={precincts} error={error?.message} />
+  return <CDAPrecinctsContent precincts={precincts} processes={processes} error={error?.message} />
 }

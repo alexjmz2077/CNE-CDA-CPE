@@ -9,15 +9,17 @@ import { ExportButtons } from "@/components/export-buttons"
 import { BulkImportButton } from "@/components/bulk-import/bulk-import-button"
 import { CDAPrecinctTable, PrecinctRow } from "@/components/cda-precinct-table"
 import { CDAPrecinctFilters } from "@/components/cda-precinct-filters"
+import type { KitLabelProcess } from "@/components/kit-labels-export-dialog"
 
 type StatusFilter = "ALL" | "ENABLED" | "DISABLED"
 
 type CDAPrecinctsContentProps = {
   precincts: PrecinctRow[]
+  processes: KitLabelProcess[]
   error?: string | null
 }
 
-export function CDAPrecinctsContent({ precincts, error }: CDAPrecinctsContentProps) {
+export function CDAPrecinctsContent({ precincts, processes, error }: CDAPrecinctsContentProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL")
 
   const filteredPrecincts = useMemo(() => {
@@ -47,6 +49,17 @@ export function CDAPrecinctsContent({ precincts, error }: CDAPrecinctsContentPro
     [filteredPrecincts],
   )
 
+  const kitLabelItems = useMemo(
+    () =>
+      filteredPrecincts.map((precinct) => ({
+        id: precinct.id,
+        name: precinct.name,
+        canton: precinct.canton,
+        parish: precinct.parish,
+      })),
+    [filteredPrecincts],
+  )
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -56,7 +69,14 @@ export function CDAPrecinctsContent({ precincts, error }: CDAPrecinctsContentPro
         </div>
         <div className="flex flex-wrap gap-2">
           <BulkImportButton moduleId="cda-precincts" />
-          <ExportButtons data={exportData} filename="recintos-cda" title="Recintos CDA" />
+          <ExportButtons
+            data={exportData}
+            filename="recintos-cda"
+            title="Recintos CDA"
+            enableKitLabels={true}
+            kitLabelItems={kitLabelItems}
+            processes={processes}
+          />
           <Link href="/dashboard/cda-precincts/new">
             <Button className="gap-2">
               <Plus className="h-4 w-4" />
